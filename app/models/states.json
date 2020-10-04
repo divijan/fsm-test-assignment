@@ -1,0 +1,21 @@
+{
+  "states": [
+    {
+      "name": "init",
+      "isInit": true,
+      "transitions": ["pending", "closed"]
+    },
+    {
+      "name": "closed",
+      "transitions": []
+    },
+    {
+      "name": "pending",
+      "transitions": ["finished", "closed"]
+    },
+    {
+      "name": "finished",
+      "transitions": ["closed"]
+    }
+  ]
+}
