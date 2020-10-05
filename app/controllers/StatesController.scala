@@ -31,6 +31,7 @@ class StatesController @Inject()(initStatesRepo: InitStatesRepository,
     }
   }
 
+
   def replace = Action.async(parse.json) { implicit request =>
     import StateTransitionTable._
 
@@ -50,21 +51,4 @@ class StatesController @Inject()(initStatesRepo: InitStatesRepository,
 
   }
 
-  /**
-   * A REST endpoint that gets all the people as JSON.
-   */
-  def show(name: String) = Action.async { implicit request =>
-    repo.list().map { people =>
-      Ok(Json.toJson(people))
-    }
-  }
 }
-
-/**
- * The create person form.
- *
- * Generally for forms, you should define separate objects to your models, since forms very often need to present data
- * in a different way to your models.  In this case, it doesn't make sense to have an id parameter in the form, since
- * that is generated once it's created.
- */
-case class CreatePersonForm(name: String, age: Int)

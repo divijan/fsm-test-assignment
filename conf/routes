@@ -14,7 +14,7 @@ GET     /entities/:name               controllers.Entities.show(name)
 # create an entity with a given name and put it into initial state
 POST    /entities/:name             controllers.Entities.create(name)
 DELETE  /entities/:name             controllers.Entities.delete(name)
-# resets specified entity back into init state
+# reset specified entity back into init state
 PATCH   /entities/:name             controllers.Entities.reset(name)
 
 # get a history of transitions for all entities in this system

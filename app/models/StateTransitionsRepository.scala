@@ -7,19 +7,17 @@ import slick.jdbc.JdbcProfile
 import scala.concurrent.{ExecutionContext, Future}
 
 /**
- * A repository for states.
+ * A repository for valid transitions between states.
  *
  * @param dbConfigProvider The Play db config provider. Play will inject this for you.
  */
 @Singleton
 class StateTransitionsRepository @Inject()(dbConfigProvider: DatabaseConfigProvider)(implicit ec: ExecutionContext) {
-  // We want the JdbcProfile for this provider
   private val dbConfig = dbConfigProvider.get[JdbcProfile]
 
-  // These imports are important, the first one brings db into scope, which will let you do the actual db operations.
-  // The second one brings the Slick DSL into scope, which lets you define the table and other queries.
   import dbConfig._
   import profile.api._
+
   //separate table because it makes no sense to repeat isInit in every row
   private class StateTransitionsTable(tag: Tag) extends Table[(String, String)](tag, "state_transitions") {
 
@@ -42,7 +40,7 @@ class StateTransitionsRepository @Inject()(dbConfigProvider: DatabaseConfigProvi
   }
 
   /**
-   * List all the states in the database.
+   * List all the valid transitions.
    */
   def list(): Future[Seq[(String, String)]] = db.run {
     states.result
