@@ -2,7 +2,6 @@ package views
 
 import java.util.NoSuchElementException
 
-import models.State
 import play.api.libs.json.{JsPath, Reads}
 import play.api.libs.json._
 import play.api.libs.json.Reads._
@@ -11,6 +10,8 @@ import play.api.libs.functional.syntax._
 case class StateTransitionTable(initialState: String, table: Map[String, Set[String]])
 
 object StateTransitionTable {
+  import State._
+
   implicit val stateTransitionReads: Reads[(State, Set[String])] = (
     (JsPath \ "name").read[String] and
       (JsPath \ "isInit").readNullable[Boolean].map(_.getOrElse(false)) and
@@ -18,7 +19,8 @@ object StateTransitionTable {
     State(name, isInit) -> transitions}
 
   implicit val stateTransitionTableReads: Reads[StateTransitionTable] =
-    (JsPath \ "states").read[Map[State, Set[String]]].map { m =>
+    (JsPath \ "states").read[Seq[(State, Set[String])]].map { seq =>
+      val m = seq.toMap
       val initStateCount = m.keys.count(_.isInit)
       if (initStateCount != 1) {
         throw new IllegalArgumentException("There should be exactly one init state!")
@@ -36,5 +38,6 @@ object StateTransitionTable {
       }
     }
 
-
+  implicit val stateTransitionTableWrites: Writes[Seq[(State, Set[String])]] =
+    (JsPath \ "states").write[Seq[(State, Set[String])]]
 }

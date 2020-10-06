@@ -1,3 +1,4 @@
+/*
 package models
 
 import java.time.Instant
@@ -40,7 +41,7 @@ class TransitionsRepository @Inject()(dbConfigProvider: DatabaseConfigProvider)(
   /**
    * Add a transition entry
    */
-  def create(entity: String, from: String, to: String, timestamp: Instant): Future[Transition] = db.run {
+  /*def create(entity: String, from: String, to: String, timestamp: Instant): Future[Transition] = db.run {
     // We create a projection of just the name and age columns, since we're not inserting a value for the id column
     (people.map(p => (p.name, p.age))
       // Now define it to return the id, because we want to know what id was generated for the person
@@ -57,5 +58,6 @@ class TransitionsRepository @Inject()(dbConfigProvider: DatabaseConfigProvider)(
    */
   def list(): Future[Seq[Transition]] = db.run {
     states.result
-  }
+  }*/
 }
+*/

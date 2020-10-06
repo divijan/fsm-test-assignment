@@ -1,3 +1,4 @@
+/*
 package models
 
 import javax.inject.{ Inject, Singleton }
@@ -55,3 +56,4 @@ class EntitiesRepository @Inject()(dbConfigProvider: DatabaseConfigProvider)(imp
     entities.result
   }
 }
+*/
