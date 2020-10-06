@@ -12,7 +12,7 @@ import scala.concurrent.{ExecutionContext, Future}
  * @param dbConfigProvider The Play db config provider. Play will inject this for you.
  */
 @Singleton
-class StateTransitionsRepository @Inject()(dbConfigProvider: DatabaseConfigProvider)(implicit ec: ExecutionContext) {
+class DBTables @Inject()(dbConfigProvider: DatabaseConfigProvider)(implicit ec: ExecutionContext) {
   private val dbConfig = dbConfigProvider.get[JdbcProfile]
 
   import dbConfig._
@@ -34,25 +34,43 @@ class StateTransitionsRepository @Inject()(dbConfigProvider: DatabaseConfigProvi
   
   private val states = TableQuery[StateTransitionsTable]
 
-  def replace(transitions: Seq[(String, String)]) = db.run {
+  private class InitStatesTable(tag: Tag) extends Table[String](tag, "init_states") {
+
+    def name = column[String]("name", O.PrimaryKey)
+
+    def * = name
+  }
+
+  private val initStates = TableQuery[InitStatesTable]
+
+  private def getInitState =
+    initStates.result.head
+
+  def replaceSTT(initState: String, transitions: Seq[(String, String)]) = db.run {
+    initStates.delete andThen
+    (initStates += initState) andThen
     states.delete andThen
-      (states ++= transitions)
+    (states ++= transitions)
   }
 
   /**
    * List all the valid transitions.
    */
-  def list(): Future[Seq[(String, String)]] = db.run {
-    states.result
-  }
+  private def listTransitions = states.result
 
-  def isTransitionValid(from: String, to: String): Future[Boolean] = db.run {
+  private def isTransitionValid(from: String, to: String) =
     states.filter(s => (s.from === from) && (s.to === to)).exists.result
-  }
 
-  def getTransitions(): Future[Map[String, Set[String]]] = list().map(
+  private def getTransitions = listTransitions.map(
     _.groupBy(_._1)
      .view.mapValues(
        _.map(_._2).toSet
       ).toMap)
+
+  private val STTQuery = for {
+    initState <- getInitState
+    transitions <- listTransitions
+  } yield (initState, transitions)
+
+  val getSTT: Future[(String, Seq[(String, String)])] = db.run(STTQuery)
 }

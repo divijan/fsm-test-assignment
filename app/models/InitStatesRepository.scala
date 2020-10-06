@@ -18,20 +18,5 @@ class InitStatesRepository @Inject()(dbConfigProvider: DatabaseConfigProvider)(i
   import dbConfig._
   import profile.api._
 
-  private class InitStatesTable(tag: Tag) extends Table[String](tag, "init_states") {
 
-    def name = column[String]("name", O.PrimaryKey)
-
-    def * = name
-  }
-  
-  private val initStates = TableQuery[InitStatesTable]
-
-  def replaceWith(name: String): Future[Int] = db.run {
-    initStates.delete andThen (initStates += name)
-  }
-
-  def get(): Future[String] = db.run {
-    initStates.result.head
-  }
 }
