@@ -3,6 +3,7 @@ package models
 import javax.inject.{Inject, Singleton}
 import play.api.db.slick.DatabaseConfigProvider
 import slick.jdbc.JdbcProfile
+import slick.lifted.ProvenShape
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -34,10 +35,10 @@ class DBTables @Inject()(dbConfigProvider: DatabaseConfigProvider)(implicit ec: 
     def * = name
   }
 
-  private class EntitiesTable(tag: Tag) extends Table[Entity](tag, "entities") {
+  private class EntitiesTable(tag: Tag) extends Table[(String, String)](tag, "entities") {
     def name = column[String]("name", O.PrimaryKey)
     def stateName = column[String]("state")
-    def * = (name, stateName) <> ((Entity.apply _).tupled, Entity.unapply)
+    def * = (name, stateName)
   }
 
   private object Queries {
@@ -52,8 +53,10 @@ class DBTables @Inject()(dbConfigProvider: DatabaseConfigProvider)(implicit ec: 
 
     def queryEntities = entities.result
 
-    def queryEntity(name: String) =
-      entities.filter(_.name === name).take(1).result
+    def queryEntity(name: String) = entities.filter(_.name === name)
+
+    def queryCreateEntity(name: String) =
+      entities forceInsertQuery (initStates.take(1).map { is => (name, is.name) })
 
     /**
      * List all the valid transitions.
@@ -77,6 +80,8 @@ class DBTables @Inject()(dbConfigProvider: DatabaseConfigProvider)(implicit ec: 
 
   import Queries._
 
+  def getSTT: Future[(String, Seq[(String, String)])] = db.run(queryISTransitions)
+  def getInitState: Future[String] = db.run(queryInitState)
   def replaceSTT(initState: String, transitions: Seq[(String, String)]) = db.run {
     DBIO.seq(
       initStates.delete,
@@ -86,7 +91,17 @@ class DBTables @Inject()(dbConfigProvider: DatabaseConfigProvider)(implicit ec: 
     )
   }
 
-  def getSTT: Future[(String, Seq[(String, String)])] = db.run(queryISTransitions)
 
-  def getEntities: Future[Seq[Entity]] = db.run(queryEntities)
+
+  def getEntities: Future[Seq[(String, String)]] = db.run(queryEntities)
+  def getEntity(name: String): Future[Option[(String, String)]] = db.run(queryEntity(name).take(1).result.headOption)
+  def createEntity(name: String): Future[Option[(String, String)]] = db.run(
+    queryCreateEntity(name) andThen
+    queryEntity(name).take(1).result.headOption
+  )
+  def deleteEntity(name: String) = db.run(queryEntity(name).delete)
+  def resetEntity(name: String) = for {
+    initState <- getInitState
+    updated <- db.run(queryEntity(name).map(_.stateName).update(initState))
+  } yield (name, initState)
 }

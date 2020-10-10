@@ -20,7 +20,7 @@ class States @Inject()(tables: DBTables,
         State(k, k == initState, v.map(_._2).toSet) }.toSet
       // Include states with no transitions (aka terminal)?
       // val terminalStates = stateTransitionsList.collect{case (from, to) if !table.isDefinedAt(to) => to}.distinct
-      Ok(Json.toJson(table))
+      OkJs(table)
     } recover { case e: NoSuchElementException =>
       val message = "State Transition Table is not defined in the system"
       NotFound(Json.toJson(ErrorBody(message)))

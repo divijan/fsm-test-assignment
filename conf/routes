@@ -12,7 +12,7 @@ GET     /entities                   controllers.Entities.index
 # get current state of the given entity
 GET     /entities/:name             controllers.Entities.show(name)
 # create an entity with a given name and put it into initial state
-POST    /entities/:name             controllers.Entities.create(name)
+POST    /entities                   controllers.Entities.create
 DELETE  /entities/:name             controllers.Entities.delete(name)
 # reset specified entity back into init state
 PATCH   /entities/:name             controllers.Entities.reset(name)
