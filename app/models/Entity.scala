@@ -1,3 +1,3 @@
 package models
 
-case class Entity(name: String) extends AnyVal
+case class Entity(name: String, state: String)

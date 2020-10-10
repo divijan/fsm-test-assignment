@@ -27,8 +27,8 @@ object StateTransitionTable {
       }
     }
 
-  implicit val stateTransitionTableWrites: Writes[Set[State]] = new Writes[Set[State]] {
-    override def writes(o: Set[State]): JsValue = Json.obj("states" ->
+  implicit val stateTransitionTableWrites: Writes[Set[State]] = new OWrites[Set[State]] {
+    override def writes(o: Set[State]): JsObject = Json.obj("states" ->
       Json.toJson(o)(Writes.iterableWrites2))
   }
 }

@@ -34,31 +34,44 @@ class DBTables @Inject()(dbConfigProvider: DatabaseConfigProvider)(implicit ec: 
     def * = name
   }
 
+  private class EntitiesTable(tag: Tag) extends Table[Entity](tag, "entities") {
+    def name = column[String]("name", O.PrimaryKey)
+    def stateName = column[String]("state")
+    def * = (name, stateName) <> ((Entity.apply _).tupled, Entity.unapply)
+  }
+
   private object Queries {
     val states = TableQuery[StateTransitionsTable]
 
     val initStates = TableQuery[InitStatesTable]
 
-    def getInitState =
+    val entities = TableQuery[EntitiesTable]
+
+    def queryInitState =
       initStates.result.head
+
+    def queryEntities = entities.result
+
+    def queryEntity(name: String) =
+      entities.filter(_.name === name).take(1).result
 
     /**
      * List all the valid transitions.
      */
-    def listTransitions = states.result
+    def queryTransitions = states.result
 
-    def isTransitionValid(from: String, to: String) =
+    def queryIsTransitionValid(from: String, to: String) =
       states.filter(s => (s.from === from) && (s.to === to)).exists.result
 
-    def getTransitions = listTransitions.map(
+    def querySTT = queryTransitions.map(
       _.groupBy(_._1)
         .view.mapValues(
         _.map(_._2).toSet
       ).toMap)
 
-    def STTQuery = for {
-      initState <- getInitState
-      transitions <- listTransitions
+    def queryISTransitions = for {
+      initState <- queryInitState
+      transitions <- queryTransitions
     } yield (initState, transitions)
   }
 
@@ -73,10 +86,7 @@ class DBTables @Inject()(dbConfigProvider: DatabaseConfigProvider)(implicit ec: 
     )
   }
 
-  def getSTT: Future[(String, Seq[(String, String)])] = db.run(STTQuery)
+  def getSTT: Future[(String, Seq[(String, String)])] = db.run(queryISTransitions)
 
-  private val schema = states.schema ++ initStates.schema
-  db.run(DBIO.seq(
-    schema.createIfNotExists
-  ))
+  def getEntities: Future[Seq[Entity]] = db.run(queryEntities)
 }

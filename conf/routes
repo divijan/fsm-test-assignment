@@ -7,10 +7,10 @@ GET     /states                     controllers.States.index
 # update the state-transition table
 POST    /states                     controllers.States.replace
 
-
+# display all entities and their current states
 GET     /entities                   controllers.Entities.index
 # get current state of the given entity
-GET     /entities/:name               controllers.Entities.show(name)
+GET     /entities/:name             controllers.Entities.show(name)
 # create an entity with a given name and put it into initial state
 POST    /entities/:name             controllers.Entities.create(name)
 DELETE  /entities/:name             controllers.Entities.delete(name)
