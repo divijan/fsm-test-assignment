@@ -20,7 +20,7 @@ class Entities @Inject()( tables: DBTables,
   def index = Action.async {
     tables.getEntities map { seq =>
       val entities = seq map Entity.tupled
-      OkJs(entities)
+      Ok(entities)
     }
   }
 
@@ -39,7 +39,7 @@ class Entities @Inject()( tables: DBTables,
       created <- tables.createEntity(entityName.name)
     } yield created.fold(
         InternalServerError(Json.toJson(ErrorBody("entity creation failed")))
-      )(p => OkJs(Entity.tupled(p)))).recover(_ =>
+      )(p => Ok(Entity.tupled(p)))).recover(_ =>
       BadRequest(Json.toJson(ErrorBody("Couldn't parse entity name from body")))
     )
   }
