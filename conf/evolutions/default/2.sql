@@ -2,7 +2,7 @@
 
 create table "entities" (
   "name" varchar not null PRIMARY KEY,
-  "stateName" varchar not null
+  "state" varchar not null
 );
 
 # --- !Downs

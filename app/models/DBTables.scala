@@ -1,9 +1,9 @@
 package models
 
 import javax.inject.{Inject, Singleton}
+import org.h2.jdbc.JdbcSQLIntegrityConstraintViolationException
 import play.api.db.slick.DatabaseConfigProvider
 import slick.jdbc.JdbcProfile
-import slick.lifted.ProvenShape
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -104,4 +104,5 @@ class DBTables @Inject()(dbConfigProvider: DatabaseConfigProvider)(implicit ec: 
     initState <- getInitState
     updated <- db.run(queryEntity(name).map(_.stateName).update(initState))
   } yield (name, initState)
+  def clearEntities = db.run(entities.delete)
 }

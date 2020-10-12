@@ -22,8 +22,7 @@ class States @Inject()(tables: DBTables,
       // val terminalStates = stateTransitionsList.collect{case (from, to) if !table.isDefinedAt(to) => to}.distinct
       OkJs(table)
     } recover { case e: NoSuchElementException =>
-      val message = "State Transition Table is not defined in the system"
-      NotFound(Json.toJson(ErrorBody(message)))
+      NotFound(ErrorBody("State Transition Table is not defined in the system"))
     }
   }
 
@@ -36,7 +35,7 @@ class States @Inject()(tables: DBTables,
       val flatTransitions = stt.table.toList.flatMap { case (name, states) => states.map(name -> _) }
       tables.replaceSTT(stt.initialState, flatTransitions) map (_ => Created(returnValue))
     } catch {
-      case NotOneInitStateException(m) => Future.successful(BadRequest(Json.toJson(ErrorBody(m))))
+      case NotOneInitStateException(m) => Future.successful(BadRequest(ErrorBody(m)))
     }
   }
 

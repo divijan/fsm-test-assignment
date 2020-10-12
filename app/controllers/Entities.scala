@@ -1,8 +1,11 @@
 package controllers
 
+import java.sql.SQLIntegrityConstraintViolationException
+
 import javax.inject._
 import models._
-import play.api.libs.json.Json
+import play.api.Logging
+import play.api.libs.json.{JsResultException, Json}
 import play.api.mvc._
 import views.{Entity, EntityName, ErrorBody}
 import views.EntityRW._
@@ -12,7 +15,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class Entities @Inject()( tables: DBTables,
                           cc: ControllerComponents
                         )(implicit ec: ExecutionContext)
-  extends AbstractController(cc) {
+  extends AbstractController(cc) with Logging {
 
   /**
    * The index action.
@@ -26,10 +29,8 @@ class Entities @Inject()( tables: DBTables,
 
 
   def show(name: String) = Action.async {
-    tables.getEntity(name) map { opt =>
-      val entity = opt map Entity.tupled
-      OkJs(entity)
-    }
+    tables.getEntity(name) map (_.fold(NotFound(ErrorBody("Requested entity does not exist")))
+                                      (e => Ok(Entity.tupled(e))))
   }
 
 
@@ -37,23 +38,28 @@ class Entities @Inject()( tables: DBTables,
     (for {
       entityName <- Future(request.body.as[EntityName])
       created <- tables.createEntity(entityName.name)
-    } yield created.fold(
-        InternalServerError(Json.toJson(ErrorBody("entity creation failed")))
-      )(p => Ok(Entity.tupled(p)))).recover(_ =>
-      BadRequest(Json.toJson(ErrorBody("Couldn't parse entity name from body")))
-    )
+    } yield created.fold(InternalServerError(ErrorBody("entity creation failed")))
+                        (p => Created(Entity.tupled(p)))).recover {
+        case e: JsResultException =>
+          BadRequest(ErrorBody("Could not parse entity name from body"))
+        case e: SQLIntegrityConstraintViolationException =>
+          Conflict(ErrorBody("This entity already exists"))
+        case e =>
+          logger.error(e.toString)
+          InternalServerError(e.toString)
+    }
   }
 
 
   def delete(name: String) = Action.async {
     tables.deleteEntity(name) map { _ =>
-      Ok
+      NoContent
     }
   }
 
   def reset(name: String) = Action.async {
     tables.resetEntity(name) map { e =>
-      OkJs(Entity.tupled(e))
+      Ok(Entity.tupled(e))
     }
   }
 }
