@@ -1,9 +1,13 @@
 package models
 
+import java.lang.IllegalStateException
+import java.time.Instant
+
 import javax.inject.{Inject, Singleton}
 import org.h2.jdbc.JdbcSQLIntegrityConstraintViolationException
 import play.api.db.slick.DatabaseConfigProvider
 import slick.jdbc.JdbcProfile
+import slick.sql.SqlProfile.ColumnOption.SqlType
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -19,13 +23,13 @@ class DBTables @Inject()(dbConfigProvider: DatabaseConfigProvider)(implicit ec: 
   import dbConfig._
   import profile.api._
 
+  /**
+   * Stores the transitions table
+   */
   private class StateTransitionsTable(tag: Tag) extends Table[(String, String)](tag, "state_transitions") {
     def from = column[String]("from")
     def to = column[String]("to")
     def pk = primaryKey("pk_state_transitions", (from, to))
-    /**
-     * This is the tables default "projection".
-     */
     def * = (from, to)
   }
 
@@ -34,11 +38,24 @@ class DBTables @Inject()(dbConfigProvider: DatabaseConfigProvider)(implicit ec: 
     def name = column[String]("name", O.PrimaryKey)
     def * = name
   }
-
+  //todo: remove state name from this table because it duplicates the contents of Transitions table
   private class EntitiesTable(tag: Tag) extends Table[(String, String)](tag, "entities") {
     def name = column[String]("name", O.PrimaryKey)
     def stateName = column[String]("state")
     def * = (name, stateName)
+  }
+
+  /**
+   * Stores history of transitions throughout the system
+   * @param tag
+   */
+  private class TransitionsTable(tag: Tag) extends Table[(String, String, String, Instant)](tag, "transitions") {
+    def entityName = column[String]("entity_name")
+    def from = column[String]("from")
+    def to = column[String]("to")
+    //let's see if this is evaluated every time anew SqlType
+    def timestamp = column[Instant]("timestamp", O.Default(Instant.now))
+    def * = (entityName, from, to, timestamp)
   }
 
   private object Queries {
@@ -47,6 +64,8 @@ class DBTables @Inject()(dbConfigProvider: DatabaseConfigProvider)(implicit ec: 
     val initStates = TableQuery[InitStatesTable]
 
     val entities = TableQuery[EntitiesTable]
+
+    val transitions = TableQuery[TransitionsTable]
 
     def queryInitState =
       initStates.result.head
@@ -61,12 +80,12 @@ class DBTables @Inject()(dbConfigProvider: DatabaseConfigProvider)(implicit ec: 
     /**
      * List all the valid transitions.
      */
-    def queryTransitions = states.result
+    def queryValidTransitions = states.result
 
     def queryIsTransitionValid(from: String, to: String) =
       states.filter(s => (s.from === from) && (s.to === to)).exists.result
 
-    def querySTT = queryTransitions.map(
+    def querySTT = queryValidTransitions.map(
       _.groupBy(_._1)
         .view.mapValues(
         _.map(_._2).toSet
@@ -74,7 +93,7 @@ class DBTables @Inject()(dbConfigProvider: DatabaseConfigProvider)(implicit ec: 
 
     def queryISTransitions = for {
       initState <- queryInitState
-      transitions <- queryTransitions
+      transitions <- queryValidTransitions
     } yield (initState, transitions)
   }
 
@@ -89,6 +108,9 @@ class DBTables @Inject()(dbConfigProvider: DatabaseConfigProvider)(implicit ec: 
       states.delete,
       (states ++= transitions)
     )
+  }
+  def isTransitionValid(from: String, to: String) = db.run {
+    queryIsTransitionValid(from, to)
   }
 
 
@@ -105,4 +127,22 @@ class DBTables @Inject()(dbConfigProvider: DatabaseConfigProvider)(implicit ec: 
     updated <- db.run(queryEntity(name).map(_.stateName).update(initState))
   } yield (name, initState)
   def clearEntities = db.run(entities.delete)
+
+  def recordTransition(entity: String, newState: String) = {
+    val currentState = getEntity(entity).map(_.get._2).transform(identity, {
+      case e: NoSuchElementException => new NoSuchElementException("This entity does not exist")
+    })
+    val exceptionMapper: PartialFunction[Throwable, Throwable] = {
+      case e: NoSuchElementException => new IllegalStateException("Requested transition is invalid")
+    }
+
+    for {
+      cs <- currentState
+      _ <- isTransitionValid(cs, newState).filter(identity).transform(identity, exceptionMapper)
+      now <- db.run {
+        (entities.filter(_.name === entity).map(_.stateName) update newState andThen
+        (transitions returning transitions.map(_.timestamp) += (entity, cs, newState, Instant.now()))).transactionally
+      }
+    } yield (entity, cs, newState, now)
+  }
 }

@@ -22,7 +22,7 @@ GET     /transitions                controllers.Transitions.index
 # get a history of transitions for the given entity
 GET     /transitions/:name          controllers.Transitions.show(name)
 # move the given entity to the given state
-PUT     /transitions/:name/:state   controllers.Transitions.move(name, state)
+PUT     /transitions/:name          controllers.Transitions.move(name)
 
 # Map static resources from the /public folder to the /assets URL path
 #GET     /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)
