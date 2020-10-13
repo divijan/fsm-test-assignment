@@ -2,6 +2,7 @@ package controllers
 
 import javax.inject._
 import models._
+import play.api.Logging
 import play.api.libs.json.Json
 import play.api.mvc._
 import views.{ErrorBody, State, StateTransitionTable}
@@ -11,7 +12,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class States @Inject()(tables: DBTables,
                        cc: ControllerComponents
                       )(implicit ec: ExecutionContext)
-  extends AbstractController(cc) {
+  extends AbstractController(cc) with Logging {
   import StateTransitionTable._
 
   def index = Action.async { implicit request =>

@@ -15,9 +15,20 @@ import ErrorBody._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Using
 
-
+//TODO: make tests run sequentially or else race condition in a shared db could occur
 class EntitiesControllerSuite extends PlaySpec with GuiceOneAppPerSuite with Results with Injecting with BeforeAndAfterAll {
-  override def beforeAll(): Unit = await(inject[DBTables].clearEntities)
+  override def beforeAll(): Unit = {
+    implicit val execCtx = inject[ExecutionContext]
+    val tables = inject[DBTables]
+    val initState = "init"
+    val states = Seq("init" -> "finished")
+    await(
+      for {
+        _ <- tables.clearAll()
+        _ <- tables.replaceSTT(initState, states)
+      } yield None
+    )
+  }
 
   "Entities controller" should {
     //todo: wrong endpoint test router
@@ -34,7 +45,7 @@ class EntitiesControllerSuite extends PlaySpec with GuiceOneAppPerSuite with Res
       responseBody mustBe entity1Js
     }
 
-    "respond with 400 to wrong JSON" in {
+    "respond with 400 Bad Request to wrong JSON" in {
       val request                = FakeRequest(POST, "/entities").withBody(Json.toJson(ErrorBody("something")))
       val result: Future[Result] = entitiesController.create().apply(request)
       val responseBody           = contentAsJson(result)
@@ -69,8 +80,6 @@ class EntitiesControllerSuite extends PlaySpec with GuiceOneAppPerSuite with Res
       status(result) mustBe 404
       responseBody mustBe Json.toJson(ErrorBody("Requested entity does not exist"))
     }
-
-    //todo: test reset after Transitions is implemented
 
     "delete an entity successfully" in {
       val deleteRequest          = FakeRequest(DELETE, "/entities/1")

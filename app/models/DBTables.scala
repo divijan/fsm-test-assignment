@@ -53,8 +53,8 @@ class DBTables @Inject()(dbConfigProvider: DatabaseConfigProvider)(implicit ec: 
     def entityName = column[String]("entity_name")
     def from = column[Option[String]]("from")
     def to = column[String]("to")
-    //let's see if this is evaluated every time anew SqlType
-    def timestamp = column[Instant]("timestamp", O.Default(Instant.now))
+    //we never use default functionality and h2 can only RETURNING an AutoInc column, so no default here
+    def timestamp = column[Instant]("timestamp")
     def * = (entityName, from, to, timestamp)
   }
 
@@ -123,7 +123,7 @@ class DBTables @Inject()(dbConfigProvider: DatabaseConfigProvider)(implicit ec: 
       _ <- (entities += (name, stateName))
       _  <- (transitions += (name, None, stateName, Instant.now()))
     } yield (name, stateName)
-  ).transform(identity, { case e: NoSuchElementException => new NoSuchElementException("No STT. Init state is undefined") })
+  ).recover { case e: NoSuchElementException => throw new NoSuchElementException("No STT. Init state is undefined") }
   def deleteEntity(name: String) = db.run(
     queryEntity(name).delete andThen
     transitions.filter(_.entityName === name).delete
@@ -131,18 +131,18 @@ class DBTables @Inject()(dbConfigProvider: DatabaseConfigProvider)(implicit ec: 
   def resetEntity(name: String) = for {
     initState <- getInitState
     _ <- db.run {
-      queryEntity(name).map(_.stateName).update(initState) andThen
+      queryEntity(name).filter(_.stateName =!= initState).map(_.stateName).update(initState).filter(_ == 1) andThen
         (transitions += (name, None, initState, Instant.now()))
     }
   } yield (name, initState)
   def clearEntities = db.run(entities.delete)
 
   def recordTransition(entityName: String, newState: String) = {
-    val currentState = getEntity(entityName).map(_.get._2).transform(identity, {
-      case e: NoSuchElementException => new NoSuchElementException("This entity does not exist")
-    })
-    val exceptionMapper: PartialFunction[Throwable, Throwable] = {
-      case e: NoSuchElementException => new IllegalStateException("Requested transition is invalid")
+    val currentState = getEntity(entityName).map(_.get._2).recover {
+      case e: NoSuchElementException => throw new NoSuchElementException("This entity does not exist")
+    }
+    val exceptionMapper: PartialFunction[Throwable, Nothing] = {
+      case e: NoSuchElementException => throw new IllegalStateException("Requested transition is invalid")
     }
 
     for {
@@ -162,5 +162,14 @@ class DBTables @Inject()(dbConfigProvider: DatabaseConfigProvider)(implicit ec: 
   }
   def getTransitions(): Future[Seq[(String, Option[String], String, Instant)]] = db.run {
     transitions.sortBy(t => (t.entityName, t.timestamp)).result
+  }
+
+  def clearAll() = db.run {
+    DBIO.seq(
+      transitions.delete,
+      entities.delete,
+      states.delete,
+      initStates.delete
+    )
   }
 }

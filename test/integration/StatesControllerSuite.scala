@@ -15,7 +15,6 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Using
 
 class StatesControllerSuite extends PlaySpec with GuiceOneAppPerSuite with Results with Injecting {
-  //TODO: test no STT error message
   "States controller" should {
     val statesController = new States(inject[DBTables], Helpers.stubControllerComponents())(inject[ExecutionContext])
     val statesJs               = Using(getClass.getResourceAsStream("../states.json"))(Json.parse _).get

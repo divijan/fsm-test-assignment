@@ -57,8 +57,11 @@ class Entities @Inject()( tables: DBTables,
   }
 
   def reset(name: String) = Action.async {
-    tables.resetEntity(name) map { e =>
+    tables.resetEntity(name).map{ e =>
       Ok(Entity.tupled(e))
+    }.recover {
+      case e: NoSuchElementException if e.getMessage == "Action.withFilter failed" =>
+        BadRequest(ErrorBody("Will not reset an entity that is already in init state"))
     }
   }
 }
