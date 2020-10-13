@@ -34,12 +34,13 @@ class EntitiesControllerSuite extends PlaySpec with GuiceOneAppPerSuite with Res
     //todo: wrong endpoint test router
     val entitiesController = new Entities(inject[DBTables], Helpers.stubControllerComponents())(inject[ExecutionContext])
     val entity1NameJs      = Json.parse("""{"name": "1"}""")
-    val entity1Js          = Json.parse("""{"name": "1", "state": "init"}""")
+    val entity1Js          = Json.parse("""{"entity": {"name": "1", "state": "init"}}""")
+    val entityNotExists    = Json.toJson(ErrorBody("Requested entity does not exist"))
 
     "create an entity and initialize it to init state" in {
       val request                = FakeRequest(POST, "/entities").withBody(entity1NameJs)
       val result: Future[Result] = entitiesController.create().apply(request)
-      val responseBody                   = contentAsJson(result)
+      val responseBody           = contentAsJson(result)
 
       status(result) mustBe 201
       responseBody mustBe entity1Js
@@ -78,7 +79,7 @@ class EntitiesControllerSuite extends PlaySpec with GuiceOneAppPerSuite with Res
       val responseBody           = contentAsJson(result)
 
       status(result) mustBe 404
-      responseBody mustBe Json.toJson(ErrorBody("Requested entity does not exist"))
+      responseBody mustBe entityNotExists
     }
 
     "delete an entity successfully" in {
@@ -92,7 +93,7 @@ class EntitiesControllerSuite extends PlaySpec with GuiceOneAppPerSuite with Res
       val responseBody           = contentAsJson(getResult)
 
       status(getResult) mustBe 404
-      responseBody mustBe Json.toJson(ErrorBody("Requested entity does not exist"))
+      responseBody mustBe entityNotExists
     }
 
   }

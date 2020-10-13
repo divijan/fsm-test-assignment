@@ -29,12 +29,16 @@ class Entities @Inject()( tables: DBTables,
 
 
   def show(name: String) = Action.async {
+    implicit val entityWrites = standaloneEntityWrites
+
     tables.getEntity(name) map (_.fold(NotFound(ErrorBody("Requested entity does not exist")))
                                       (e => Ok(Entity.tupled(e))))
   }
 
 
   def create = Action.async(parse.json) { implicit request =>
+    implicit val entityWrites = standaloneEntityWrites
+
     (for {
       entityName <- Future(request.body.as[EntityName])
       created <- tables.createEntity(entityName.name)
