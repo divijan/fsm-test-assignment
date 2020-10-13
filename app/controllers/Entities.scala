@@ -38,8 +38,7 @@ class Entities @Inject()( tables: DBTables,
     (for {
       entityName <- Future(request.body.as[EntityName])
       created <- tables.createEntity(entityName.name)
-    } yield created.fold(InternalServerError(ErrorBody("entity creation failed")))
-                        (p => Created(Entity.tupled(p)))).recover {
+    } yield Created(Entity.tupled(created))).recover {
         case e: JsResultException =>
           BadRequest(ErrorBody("Could not parse entity name from body"))
         case e: SQLIntegrityConstraintViolationException =>

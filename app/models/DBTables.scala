@@ -117,10 +117,13 @@ class DBTables @Inject()(dbConfigProvider: DatabaseConfigProvider)(implicit ec: 
 
   def getEntities: Future[Seq[(String, String)]] = db.run(queryEntities)
   def getEntity(name: String): Future[Option[(String, String)]] = db.run(queryEntity(name).take(1).result.headOption)
-  def createEntity(name: String): Future[Option[(String, String)]] = db.run(
-    queryCreateEntity(name) andThen
-    queryEntity(name).take(1).result.headOption
-  )
+  def createEntity(name: String): Future[(String, String)] = db.run(
+    for {
+      stateName <- initStates.take(1).result.head
+      _ <- (entities += (name, stateName))
+      _  <- (transitions += (name, None, stateName, Instant.now()))
+    } yield (name, stateName)
+  ).transform(identity, { case e: NoSuchElementException => new NoSuchElementException("No STT. Init state is undefined") })
   def deleteEntity(name: String) = db.run(
     queryEntity(name).delete andThen
     transitions.filter(_.entityName === name).delete
@@ -146,8 +149,11 @@ class DBTables @Inject()(dbConfigProvider: DatabaseConfigProvider)(implicit ec: 
       cs <- currentState
       _ <- isTransitionValid(cs, newState).filter(identity).transform(identity, exceptionMapper)
       now <- db.run {
-        (entities.filter(_.name === entityName).map(_.stateName) update newState andThen
-        (transitions returning transitions.map(_.timestamp) += (entityName, Some(cs), newState, Instant.now()))).transactionally
+        (for {
+          _   <- entities.filter(_.name === entityName).map(_.stateName) update newState
+          now <- DBIO.successful(Instant.now())
+          _   <- (transitions += (entityName, Some(cs), newState, now))
+        } yield now).transactionally
       }
     } yield (entityName, Some(cs), newState, now)
   }
