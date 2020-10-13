@@ -38,7 +38,7 @@ class DBTables @Inject()(dbConfigProvider: DatabaseConfigProvider)(implicit ec: 
     def name = column[String]("name", O.PrimaryKey)
     def * = name
   }
-  //todo: remove state name from this table because it duplicates the contents of Transitions table
+  //todo: remove this table because it duplicates the contents of Transitions table
   private class EntitiesTable(tag: Tag) extends Table[(String, String)](tag, "entities") {
     def name = column[String]("name", O.PrimaryKey)
     def stateName = column[String]("state")
@@ -49,9 +49,9 @@ class DBTables @Inject()(dbConfigProvider: DatabaseConfigProvider)(implicit ec: 
    * Stores history of transitions throughout the system
    * @param tag
    */
-  private class TransitionsTable(tag: Tag) extends Table[(String, String, String, Instant)](tag, "transitions") {
+  private class TransitionsTable(tag: Tag) extends Table[(String, Option[String], String, Instant)](tag, "transitions") {
     def entityName = column[String]("entity_name")
-    def from = column[String]("from")
+    def from = column[Option[String]]("from")
     def to = column[String]("to")
     //let's see if this is evaluated every time anew SqlType
     def timestamp = column[Instant]("timestamp", O.Default(Instant.now))
@@ -121,15 +121,21 @@ class DBTables @Inject()(dbConfigProvider: DatabaseConfigProvider)(implicit ec: 
     queryCreateEntity(name) andThen
     queryEntity(name).take(1).result.headOption
   )
-  def deleteEntity(name: String) = db.run(queryEntity(name).delete)
+  def deleteEntity(name: String) = db.run(
+    queryEntity(name).delete andThen
+    transitions.filter(_.entityName === name).delete
+  )
   def resetEntity(name: String) = for {
     initState <- getInitState
-    updated <- db.run(queryEntity(name).map(_.stateName).update(initState))
+    _ <- db.run {
+      queryEntity(name).map(_.stateName).update(initState) andThen
+        (transitions += (name, None, initState, Instant.now()))
+    }
   } yield (name, initState)
   def clearEntities = db.run(entities.delete)
 
-  def recordTransition(entity: String, newState: String) = {
-    val currentState = getEntity(entity).map(_.get._2).transform(identity, {
+  def recordTransition(entityName: String, newState: String) = {
+    val currentState = getEntity(entityName).map(_.get._2).transform(identity, {
       case e: NoSuchElementException => new NoSuchElementException("This entity does not exist")
     })
     val exceptionMapper: PartialFunction[Throwable, Throwable] = {
@@ -140,9 +146,15 @@ class DBTables @Inject()(dbConfigProvider: DatabaseConfigProvider)(implicit ec: 
       cs <- currentState
       _ <- isTransitionValid(cs, newState).filter(identity).transform(identity, exceptionMapper)
       now <- db.run {
-        (entities.filter(_.name === entity).map(_.stateName) update newState andThen
-        (transitions returning transitions.map(_.timestamp) += (entity, cs, newState, Instant.now()))).transactionally
+        (entities.filter(_.name === entityName).map(_.stateName) update newState andThen
+        (transitions returning transitions.map(_.timestamp) += (entityName, Some(cs), newState, Instant.now()))).transactionally
       }
-    } yield (entity, cs, newState, now)
+    } yield (entityName, Some(cs), newState, now)
+  }
+  def getTransitionsFor(entityName: String): Future[Seq[(String, Option[String], String, Instant)]] = db.run {
+    transitions.filter(_.entityName === entityName).sortBy(_.timestamp).result
+  }
+  def getTransitions(): Future[Seq[(String, Option[String], String, Instant)]] = db.run {
+    transitions.sortBy(t => (t.entityName, t.timestamp)).result
   }
 }

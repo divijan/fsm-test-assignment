@@ -70,7 +70,7 @@ class EntitiesControllerSuite extends PlaySpec with GuiceOneAppPerSuite with Res
       responseBody mustBe Json.toJson(ErrorBody("Requested entity does not exist"))
     }
 
-    //todo: reset after Transitions is implemented
+    //todo: test reset after Transitions is implemented
 
     "delete an entity successfully" in {
       val deleteRequest          = FakeRequest(DELETE, "/entities/1")

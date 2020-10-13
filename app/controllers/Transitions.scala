@@ -22,10 +22,20 @@ class Transitions @Inject()(tables: DBTables,
    * The index action shows the whole transition log
    * @return
    */
-  def index = TODO
+  def index = Action.async {
+    tables.getTransitions().map(seq => Ok(seq.map((Transition.apply _).tupled)))
+  }
 
 
-  def show(name: String) = TODO
+  def show(name: String) = Action.async {
+    tables.getTransitionsFor(name).map { seq =>
+      if (seq.isEmpty) {
+        NotFound(ErrorBody("This entity does not exist"))
+      } else {
+        Ok(seq.map((Transition.apply _).tupled))
+      }
+    }
+  }
 
 
   def move(entity: String) = Action.async(parse.json) { implicit request =>
