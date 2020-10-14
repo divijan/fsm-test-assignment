@@ -2,7 +2,7 @@ lazy val root = (project in file("."))
   .enablePlugins(PlayScala)
   .settings(
     name := """fsm-test-assignment""",
-    version := "1.0",
+    version := "1.0.1",
     scalaVersion := "2.13.1",
     libraryDependencies ++= Seq(
       guice,
