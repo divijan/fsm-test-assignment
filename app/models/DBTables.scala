@@ -74,9 +74,6 @@ class DBTables @Inject()(dbConfigProvider: DatabaseConfigProvider)(implicit ec: 
 
     def queryEntity(name: String) = entities.filter(_.name === name)
 
-    def queryCreateEntity(name: String) =
-      entities forceInsertQuery (initStates.take(1).map { is => (name, is.name) })
-
     /**
      * List all the valid transitions.
      */
@@ -85,17 +82,12 @@ class DBTables @Inject()(dbConfigProvider: DatabaseConfigProvider)(implicit ec: 
     def queryIsTransitionValid(from: String, to: String) =
       states.filter(s => (s.from === from) && (s.to === to)).exists.result
 
-    def querySTT = queryValidTransitions.map(
-      _.groupBy(_._1)
-        .view.mapValues(
-        _.map(_._2).toSet
-      ).toMap)
-
     def queryISTransitions = for {
       initState <- queryInitState
       transitions <- queryValidTransitions
     } yield (initState, transitions)
   }
+
 
   import Queries._
 
@@ -114,8 +106,7 @@ class DBTables @Inject()(dbConfigProvider: DatabaseConfigProvider)(implicit ec: 
   }
 
 
-
-  def getEntities: Future[Seq[(String, String)]] = db.run(queryEntities)
+  def getEntities(): Future[Seq[(String, String)]] = db.run(queryEntities)
   def getEntity(name: String): Future[Option[(String, String)]] = db.run(queryEntity(name).take(1).result.headOption)
   def createEntity(name: String): Future[(String, String)] = db.run(
     for {
@@ -135,7 +126,7 @@ class DBTables @Inject()(dbConfigProvider: DatabaseConfigProvider)(implicit ec: 
         (transitions += (name, None, initState, Instant.now()))
     }
   } yield (name, initState)
-  def clearEntities = db.run(entities.delete)
+  def clearEntities() = db.run(entities.delete)
 
   def recordTransition(entityName: String, newState: String) = {
     val currentState = getEntity(entityName).map(_.get._2).recover {

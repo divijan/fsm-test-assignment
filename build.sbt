@@ -1,7 +1,11 @@
+import com.typesafe.sbt.packager.docker.DockerChmodType
+import com.typesafe.sbt.packager.docker.DockerPermissionStrategy
+import com.typesafe.sbt.packager.docker.DockerPlugin.autoImport.dockerPermissionStrategy
+
 lazy val root = (project in file("."))
-  .enablePlugins(PlayScala)
+  .enablePlugins(PlayScala, DockerPlugin)
   .settings(
-    name := """fsm-test-assignment""",
+    name := "fsm-test-assignment",
     version := "1.0.1",
     scalaVersion := "2.13.1",
     libraryDependencies ++= Seq(
@@ -15,5 +19,11 @@ lazy val root = (project in file("."))
       "-feature",
       "-deprecation",
       "-Xfatal-warnings"
-    )
+    ),
+
+    maintainer in Docker := "Yar Ilich <yar.ilich@gmail.com>",
+    dockerChmodType := DockerChmodType.UserGroupWriteExecute,
+    dockerPermissionStrategy := DockerPermissionStrategy.CopyChown,
+    dockerExposedPorts += 9000,
+    javaOptions in Universal += "-Dplay.evolutions.db.default.autoApply=true"
   )
