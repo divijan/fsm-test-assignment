@@ -1,6 +1,5 @@
 package integration
 
-import controllers.{States, Transitions}
 import models.DBTables
 import org.scalatest.BeforeAndAfterAll
 import org.scalatestplus.play._
@@ -9,7 +8,7 @@ import play.api.libs.json.Json
 import play.api.mvc._
 import play.api.test.Helpers._
 import play.api.test._
-import views.{StateTransitionTable, Transition}
+import views.{StateTransitionTable, Transition, TransitionLog}
 import Transition._
 import StateTransitionTable._
 
@@ -26,7 +25,6 @@ class FSMSuite extends PlaySpec with GuiceOneAppPerSuite with Results with Injec
 
   "FSM application" should {
 
-    //val transitionsController = new Transitions(inject[DBTables], Helpers.stubControllerComponents())(inject[ExecutionContext])
     val statesJs               = Using(getClass.getResourceAsStream("../states.json"))(Json.parse _).get
 
     "fail to get a non-existent STT" in {
@@ -38,13 +36,13 @@ class FSMSuite extends PlaySpec with GuiceOneAppPerSuite with Results with Injec
       bodyJs mustBe Json.parse("""{"error": "State Transition Table is not defined in the system"}""")
     }
 
-    "return an empty list when no transitions in the log" in {
+    "return Not Found when no transitions in the log" in {
       val request = FakeRequest(GET, "/transitions")
       val result = route(app, request).get
       val bodyJs = contentAsJson(result)
 
-      status(result) mustBe 200
-      bodyJs mustEqual Json.parse("""{ "transitions": [] }""")
+      status(result) mustBe 404
+      bodyJs mustEqual Json.parse("""{ "error": "Transition log is empty" }""")
     }
 
     "respond with Not Found if trying to get transitions for non-existent entity" in {
@@ -76,14 +74,10 @@ class FSMSuite extends PlaySpec with GuiceOneAppPerSuite with Results with Injec
       val getTransitionsFor1 = FakeRequest(GET, "/transitions/1")
       val transitionsResult = route(app, getTransitionsFor1).get
       val bodyJs = contentAsJson(transitionsResult)
-      val transitions = bodyJs.as[Seq[Transition]]
+      val transitionLog = bodyJs.as[TransitionLog]
 
       status(transitionsResult) mustBe 200
-      transitions.size mustEqual 1
-      val t = transitions.head
-      t.entity mustEqual "1"
-      t.from mustBe None
-      t.to mustBe "init"
+      transitionLog mustEqual TransitionLog("1", Seq(Transition(None, "init")))
     }
 
     "refuse to make an invalid transition" in {
@@ -108,11 +102,11 @@ class FSMSuite extends PlaySpec with GuiceOneAppPerSuite with Results with Injec
       val moveRequest = FakeRequest(PUT, "/transitions/1").withBody(Json.parse("""{ "state": "pending" }"""))
       val result = route(app, moveRequest).get
       val bodyJs = contentAsJson(result)
-      val response = bodyJs.as[Transition]
+      val response = bodyJs.as[TransitionLog]
 
       status(result) mustBe 200
-      response.from mustEqual Some("init")
-      response.to mustEqual "pending"
+      val transition = response.transitions.head
+      transition mustEqual Transition(Some("init"), "pending")
     }
 
     "still return a valid log of transitions for one entity when second entity exists" in {
@@ -122,13 +116,12 @@ class FSMSuite extends PlaySpec with GuiceOneAppPerSuite with Results with Injec
       val getTransitionsFor1 = FakeRequest(GET, "/transitions/1")
       val transitionsResult = route(app, getTransitionsFor1).get
       val bodyJs = contentAsJson(transitionsResult)
-      val transitions = bodyJs.as[Seq[Transition]]
+      val transitionLog = bodyJs.as[TransitionLog]
 
-      transitions.size mustBe 2
-      transitions.map(t => (t.entity, t.from, t.to)) mustEqual Seq(("1", None, "init"), ("1", Some("init"), "pending"))
+      transitionLog mustEqual TransitionLog("1", Seq(Transition(None, "init"), Transition(Some("init"), "pending")))
     }
 
-    "should refuse to reset an entity in init state" in {
+    "refuse to reset an entity in init state" in {
       val resetReq = FakeRequest(PATCH, "/entities/2")
       val resetResponse = route(app, resetReq).get
       val errorJs = contentAsJson(resetResponse)
@@ -137,7 +130,7 @@ class FSMSuite extends PlaySpec with GuiceOneAppPerSuite with Results with Injec
       errorJs mustEqual Json.parse("""{ "error": "Will not reset an entity that is already in init state" }""")
     }
 
-    "should reset an entity correctly" in {
+    "reset an entity correctly" in {
       val resetReq = FakeRequest(PATCH, "/entities/1")
       val resetResponse = route(app, resetReq).get
 
@@ -155,7 +148,19 @@ class FSMSuite extends PlaySpec with GuiceOneAppPerSuite with Results with Injec
       )
     }
 
-    "should drop transition log when deleting an entity" in {
+    "return correct general transition log" in {
+      val getTransitions = FakeRequest(GET, "/transitions")
+      val transitionsResult = route(app, getTransitions).get
+      val bodyJs = contentAsJson(transitionsResult)
+      val generalTransitionLog = bodyJs.as[Seq[TransitionLog]]
+
+      val initTransition = Transition(None, "init")
+      generalTransitionLog mustEqual Seq(
+        TransitionLog("1", Seq(initTransition, Transition(Some("init"), "pending"), initTransition)),
+        TransitionLog("2", Seq(initTransition)))
+    }
+
+    "drop transition log when deleting an entity" in {
       val deleteReq = FakeRequest(DELETE, "/entities/1")
       val deleteResponse = route(app, deleteReq).get
       status(deleteResponse) must be(204)

@@ -2,18 +2,25 @@ package views
 
 import java.time.Instant
 
-import play.api.libs.json.{JsObject, JsPath, Json, OWrites, Writes}
+import play.api.libs.json.Json
 
-case class Transition(entity: String, from: Option[String], to: String, timestamp: Instant)
+case class Transition(from: Option[String], to: String)
 
 object Transition {
-  implicit val transitionWrites = Json.writes[Transition]
 
-  implicit val transitionSeqWrites = new OWrites[Seq[Transition]] {
-    override def writes(o: Seq[Transition]): JsObject = Json.obj("transitions" ->
-      Json.toJson(o)(Writes.iterableWrites2))
+  def fromTuple(tup: (String, Option[String], String, Instant)): Transition = {
+    Transition(tup._2, tup._3)
   }
 
+}
+
+case class TransitionLog(entityName: String, transitions: Seq[Transition])
+
+object TransitionLog {
+  implicit val transitionWrites = Json.writes[Transition]
+  implicit val transitionLogWrites = Json.writes[TransitionLog]
+  //implicit val generalTransitionLogWrites = new OWrites[Seq[TransitionLog]]
+
   implicit val transitionReads = Json.reads[Transition]
-  implicit val transitionSeqReads = (JsPath \ "transitions").read[Seq[Transition]]
+  implicit val transitionLogReads = Json.reads[TransitionLog]
 }
