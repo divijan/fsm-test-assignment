@@ -1,6 +1,6 @@
 package integration
 
-import controllers.{Entities, States}
+import controllers.Entities
 import models.DBTables
 import org.scalatest.BeforeAndAfterAll
 import org.scalatestplus.play._

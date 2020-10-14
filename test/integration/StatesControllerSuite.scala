@@ -4,11 +4,11 @@ import controllers.States
 import models.DBTables
 import org.scalatestplus.play._
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
-import play.api.libs.json.{JsValue, Json}
+import play.api.libs.json.Json
 import play.api.mvc._
 import play.api.test.Helpers._
 import play.api.test._
-import views.{State, StateTransitionTable}
+import views.StateTransitionTable
 import StateTransitionTable._
 
 import scala.concurrent.{ExecutionContext, Future}
