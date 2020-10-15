@@ -8,3 +8,4 @@ branches:
     - master
     - develop
     - feature_travisCI
+    - release_*
