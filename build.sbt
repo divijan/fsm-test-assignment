@@ -8,7 +8,6 @@ lazy val root = (project in file("."))
     name := "fsm-test-assignment",
     version := "1.1",
     scalaVersion := "2.13.3",
-    crossScalaVersions += "2.12.10",
     libraryDependencies ++= Seq(
       guice,
       "com.typesafe.play" %% "play-slick" % "5.0.0",
