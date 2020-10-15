@@ -8,15 +8,16 @@ import play.api.libs.json.Json
 import play.api.mvc._
 import play.api.test.Helpers._
 import play.api.test._
-import views.StateTransitionTable
-import StateTransitionTable._
+import views.StateTransitionTableRW._
+import models.StateTransitionTable
+import play.api.cache.AsyncCacheApi
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Using
 
 class StatesControllerSuite extends PlaySpec with GuiceOneAppPerSuite with Results with Injecting {
   "States controller" should {
-    val statesController = new States(inject[DBTables], Helpers.stubControllerComponents())(inject[ExecutionContext])
+    val statesController = new States(inject[DBTables], inject[AsyncCacheApi],stubControllerComponents())(inject[ExecutionContext])
     val statesJs               = Using(getClass.getResourceAsStream("../states.json"))(Json.parse _).get
 
     "update state transition table" in {

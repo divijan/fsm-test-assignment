@@ -13,7 +13,6 @@ import views.ErrorBody
 import ErrorBody._
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.Using
 
 //TODO: make tests run sequentially or else race condition in a shared db could occur
 class EntitiesControllerSuite extends PlaySpec with GuiceOneAppPerSuite with Results with Injecting with BeforeAndAfterAll {
