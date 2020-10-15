@@ -21,7 +21,7 @@ class Entities @Inject()( tables: DBTables,
    * The index action.
    */
   def index = Action.async {
-    tables.getEntities map { seq =>
+    tables.getEntities() map { seq =>
       val entities = seq map Entity.tupled
       Ok(entities)
     }

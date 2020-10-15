@@ -1,0 +1,15 @@
+language: scala
+scala:
+  - 2.13.3
+  - 2.13.1
+  - 2.12.10
+
+branches:
+  only:
+    - master
+    - develop
+    - feature_travisCI
+
+jobs:
+  allow_failures:
+    - scala: 2.12.10
