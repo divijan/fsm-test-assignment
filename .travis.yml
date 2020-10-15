@@ -1,0 +1,11 @@
+language: scala
+scala:
+  - 2.13.3
+  - 2.13.1
+
+branches:
+  only:
+    - master
+    - develop
+    - feature_travisCI
+    - /release_.*/

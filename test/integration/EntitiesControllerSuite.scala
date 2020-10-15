@@ -31,7 +31,6 @@ class EntitiesControllerSuite extends PlaySpec with GuiceOneAppPerSuite with Res
   }
 
   "Entities controller" should {
-    //todo: wrong endpoint test router
     val entitiesController = new Entities(inject[DBTables], Helpers.stubControllerComponents())(inject[ExecutionContext])
     val entity1NameJs      = Json.parse("""{"name": "1"}""")
     val entity1Js          = Json.parse("""{"entity": {"name": "1", "state": "init"}}""")
