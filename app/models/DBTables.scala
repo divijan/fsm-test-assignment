@@ -91,8 +91,8 @@ class DBTables @Inject()(dbConfigProvider: DatabaseConfigProvider)(implicit ec: 
 
   import Queries._
 
-  def getSTT: Future[(String, Seq[(String, String)])] = db.run(queryISTransitions)
-  def getInitState: Future[String] = db.run(queryInitState)
+  def getSTT(): Future[(String, Seq[(String, String)])] = db.run(queryISTransitions)
+  def getInitState(): Future[String] = db.run(queryInitState)
   def replaceSTT(initState: String, transitions: Seq[(String, String)]) = db.run {
     DBIO.seq(
       initStates.delete,
@@ -120,7 +120,7 @@ class DBTables @Inject()(dbConfigProvider: DatabaseConfigProvider)(implicit ec: 
     transitions.filter(_.entityName === name).delete
   )
   def resetEntity(name: String) = for {
-    initState <- getInitState
+    initState <- getInitState()
     _ <- db.run {
       queryEntity(name).filter(_.stateName =!= initState).map(_.stateName).update(initState).filter(_ == 1) andThen
         (transitions += (name, None, initState, Instant.now()))
@@ -128,25 +128,14 @@ class DBTables @Inject()(dbConfigProvider: DatabaseConfigProvider)(implicit ec: 
   } yield (name, initState)
   def clearEntities() = db.run(entities.delete)
 
-  def recordTransition(entityName: String, newState: String) = {
-    val currentState = getEntity(entityName).map(_.get._2).recover {
-      case e: NoSuchElementException => throw new NoSuchElementException("This entity does not exist")
-    }
-    val exceptionMapper: PartialFunction[Throwable, Nothing] = {
-      case e: NoSuchElementException => throw new IllegalStateException("Requested transition is invalid")
-    }
-
-    for {
-      cs <- currentState
-      _ <- isTransitionValid(cs, newState).filter(identity).transform(identity, exceptionMapper)
-      now <- db.run {
-        (for {
-          _   <- entities.filter(_.name === entityName).map(_.stateName) update newState
-          now <- DBIO.successful(Instant.now())
-          _   <- (transitions += (entityName, Some(cs), newState, now))
-        } yield now).transactionally
-      }
-    } yield (entityName, Some(cs), newState, now)
+  def recordTransition(entityName: String, currentState: String, newState: String) = {
+    db.run {
+      (for {
+        _   <- queryEntity(entityName).map(_.stateName) update newState
+        now <- DBIO.successful(Instant.now())
+        _   <- (transitions += (entityName, Some(currentState), newState, now))
+       } yield now).transactionally
+    } map (now => (entityName, Some(currentState), newState, now))
   }
   def getTransitionsFor(entityName: String): Future[Seq[(String, Option[String], String, Instant)]] = db.run {
     transitions.filter(_.entityName === entityName).sortBy(_.timestamp).result

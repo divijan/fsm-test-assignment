@@ -12,8 +12,8 @@ import views.EntityRW._
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class Entities @Inject()( tables: DBTables,
-                          cc: ControllerComponents
+class Entities @Inject()(tables: DBTables,
+                         cc: ControllerComponents
                         )(implicit ec: ExecutionContext)
   extends AbstractController(cc) with Logging {
 

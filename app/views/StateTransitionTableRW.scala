@@ -1,17 +1,12 @@
 package views
 
-import java.util.NoSuchElementException
-
 import play.api.libs.json.{JsPath, Reads}
 import play.api.libs.json._
 import play.api.libs.json.Reads._
-import play.api.libs.functional.syntax._
+import models.StateTransitionTable
 
-case class StateTransitionTable(initialState: String, table: Map[String, Set[String]])
 
-object StateTransitionTable {
-  import State._
-
+object StateTransitionTableRW {
   case class NotOneInitStateException(msg: String) extends Exception
 
   implicit val stateTransitionTableReads: Reads[StateTransitionTable] =
@@ -27,8 +22,10 @@ object StateTransitionTable {
       }
     }
 
-  implicit val stateTransitionTableWrites: Writes[Set[State]] = new OWrites[Set[State]] {
-    override def writes(o: Set[State]): JsObject = Json.obj("states" ->
-      Json.toJson(o)(Writes.iterableWrites2))
+  implicit val stateTransitionTableWrites: Writes[StateTransitionTable] = new OWrites[StateTransitionTable] {
+    override def writes(stt: StateTransitionTable): JsObject = {
+      val seq = stt.table.map { case (state, transitions) => State(state, state == stt.initialState, transitions) }.toSeq
+      Json.obj("states" -> Json.toJson(seq))
+    }
   }
 }

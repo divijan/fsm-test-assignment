@@ -25,7 +25,7 @@ class DBSuite extends PlaySpec with GuiceOneAppPerSuite with Injecting {
 
       val readStt = for {
         _ <- tables.replaceSTT(start, states)
-        read <- tables.getSTT
+        read <- tables.getSTT()
       } yield read
 
       readStt.map { case (init, seq) =>

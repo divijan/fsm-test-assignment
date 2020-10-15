@@ -3,10 +3,7 @@ package controllers
 import javax.inject._
 import models._
 import play.api.Logging
-import play.api.data.Form
-import play.api.data.Forms._
-import play.api.data.validation.Constraints._
-import play.api.i18n._
+import play.api.cache.AsyncCacheApi
 import play.api.libs.json.{JsResultException, Json}
 import play.api.mvc._
 import views.{ErrorBody, StateName, Transition}
@@ -14,7 +11,8 @@ import views.{ErrorBody, StateName, Transition}
 import scala.concurrent.{ExecutionContext, Future}
 
 class Transitions @Inject()(tables: DBTables,
-                            cc: ControllerComponents
+                            cache : AsyncCacheApi,
+                            cc    : ControllerComponents
                            )(implicit ec: ExecutionContext)
   extends AbstractController(cc) with Logging {
 
@@ -39,12 +37,23 @@ class Transitions @Inject()(tables: DBTables,
 
 
   def move(entity: String) = Action.async(parse.json) { implicit request =>
+    def isTransitionValidCached(currentState: String, newState: String): Future[Boolean] = {
+      val stt = cache.getOrElseUpdate("STT")(tables.getSTT().map((StateTransitionTable.from _).tupled))
+      stt.map(_.isTransitionValid(currentState, newState))
+    }
+
+    lazy val currentStateFromDB = tables.getEntity(entity).map(_.get._2)
+
     (for {
-      newState <- Future(request.body.as[StateName])
-      created <- tables.recordTransition(entity, newState.state)
+      newState <- Future(request.body.as[StateName].state)
+      currentState <- currentStateFromDB
+      isValid <- isTransitionValidCached(currentState, newState)
+      if isValid
+      created  <- tables.recordTransition(entity, currentState, newState)
     } yield Ok((Transition.apply _).tupled(created))).recover {
-      case e: NoSuchElementException => NotFound(ErrorBody(e.getMessage))
-      case e: IllegalStateException => BadRequest(ErrorBody(e.getMessage))
+      case e: NoSuchElementException if e.getMessage == "Future.filter predicate is not satisfied" =>
+        BadRequest(ErrorBody("Requested transition is invalid"))
+      case e: NoSuchElementException => NotFound(ErrorBody("This entity does not exist"))
       case e: JsResultException => BadRequest(ErrorBody("Could not parse state name from body"))
       case e =>
         logger.error(e.toString)

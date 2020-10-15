@@ -9,9 +9,10 @@ import play.api.libs.json.Json
 import play.api.mvc._
 import play.api.test.Helpers._
 import play.api.test._
-import views.{StateTransitionTable, Transition}
+import views.{Transition, StateTransitionTableRW}
+import models.StateTransitionTable
 import Transition._
-import StateTransitionTable._
+import StateTransitionTableRW._
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Using

@@ -1,19 +1,17 @@
 package unit
 
+import models.StateTransitionTable
 import org.scalatestplus.play.PlaySpec
 import play.api.libs.json.Json
-import views.State
-import org.scalatestplus.play._
-import play.api.test._
-//import views.StateTransitionTable._
+import views.StateTransitionTableRW._
 
 class JsonWritesSuite extends PlaySpec {
   "JsonWrites" should {
     "write a state transition table representation correctly" in {
-      val stt = Set(
-        State("init", true, Set("pending", "finished")),
-        State("pending", false, Set("finished"))
-      )
+      val stt = StateTransitionTable("init", Map(
+        "init" -> Set("pending", "finished"),
+        "pending" -> Set("finished")
+      ))
       val expectedJson = Json.parse(
         """{"states": [
           |  {
@@ -26,7 +24,7 @@ class JsonWritesSuite extends PlaySpec {
           |    "transitions": ["finished"]
           |  }
           |]}""".stripMargin)
-      Json.toJson(stt)(views.StateTransitionTable.stateTransitionTableWrites) mustBe expectedJson
+      Json.toJson(stt) mustBe expectedJson
     }
 
   }
