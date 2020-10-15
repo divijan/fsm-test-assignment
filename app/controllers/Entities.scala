@@ -47,6 +47,8 @@ class Entities @Inject()(tables: DBTables,
           BadRequest(ErrorBody("Could not parse entity name from body"))
         case e: SQLIntegrityConstraintViolationException =>
           Conflict(ErrorBody("This entity already exists"))
+        case e: NoSuchElementException =>
+          BadRequest(ErrorBody("Cannot create an entity with no STT in the system"))
         case e =>
           logger.error(e.toString)
           InternalServerError(e.toString)

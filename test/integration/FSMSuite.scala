@@ -9,7 +9,7 @@ import play.api.libs.json.Json
 import play.api.mvc._
 import play.api.test.Helpers._
 import play.api.test._
-import views.{Transition, StateTransitionTableRW}
+import views.{ErrorBody, StateTransitionTableRW, Transition}
 import models.StateTransitionTable
 import Transition._
 import StateTransitionTableRW._
@@ -64,6 +64,13 @@ class FSMSuite extends PlaySpec with GuiceOneAppPerSuite with Results with Injec
 
       status(result) mustBe 200
       bodyJs mustEqual Json.parse("""{"entities": []}""")
+    }
+
+    "refuse to create an entity without STT" in {
+      val createdEntity = route(app, FakeRequest(POST, "/entities").withBody(Json.parse("""{ "name": "1" }"""))).get
+
+      status(createdEntity) mustBe 400
+      contentAsJson(createdEntity) mustEqual Json.toJson(ErrorBody("Cannot create an entity with no STT in the system"))
     }
 
     "return a single transition for just created entity" in {
