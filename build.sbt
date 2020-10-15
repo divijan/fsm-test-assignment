@@ -6,7 +6,7 @@ lazy val root = (project in file("."))
   .enablePlugins(PlayScala, DockerPlugin)
   .settings(
     name := "fsm-test-assignment",
-    version := "1.0.1",
+    version := "1.1",
     scalaVersion := "2.13.3",
     crossScalaVersions += "2.12.10",
     libraryDependencies ++= Seq(
