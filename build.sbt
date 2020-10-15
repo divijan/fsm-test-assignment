@@ -16,6 +16,10 @@ lazy val root = (project in file("."))
       "com.h2database" % "h2" % "1.4.199",
       "org.scalatestplus.play" %% "scalatestplus-play" % "5.1.0" % "test"
     ),
+    dependencyOverrides ++= Seq(
+      "org.checkerframework" % "checker-qual" % "3.4.0",
+      "com.google.guava" % "guava" % "28.2-jre"
+    ),
     scalacOptions ++= Seq(
       "-feature",
       "-deprecation",
