@@ -2,8 +2,10 @@ import com.typesafe.sbt.packager.docker.DockerChmodType
 import com.typesafe.sbt.packager.docker.DockerPermissionStrategy
 import com.typesafe.sbt.packager.docker.DockerPlugin.autoImport.dockerPermissionStrategy
 
+Global / onChangedBuildSource := ReloadOnSourceChanges
+
 lazy val root = (project in file("."))
-  .enablePlugins(PlayScala, DockerPlugin)
+  .enablePlugins(PlayScala, DockerPlugin, AshScriptPlugin)
   .settings(
     name := "fsm-test-assignment",
     version := "1.2",
@@ -27,8 +29,9 @@ lazy val root = (project in file("."))
     ),
 
     maintainer in Docker := "Yar Ilich <yar.ilich@gmail.com>",
-    dockerChmodType := DockerChmodType.UserGroupWriteExecute,
+    dockerChmodType          := DockerChmodType.UserGroupWriteExecute,
     dockerPermissionStrategy := DockerPermissionStrategy.CopyChown,
-    dockerExposedPorts += 9000,
+    dockerExposedPorts       += 9000,
+    dockerBaseImage          := "openjdk:jre-alpine",
     javaOptions in Universal += "-Dplay.evolutions.db.default.autoApply=true"
   )
