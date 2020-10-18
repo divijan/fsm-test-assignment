@@ -47,14 +47,14 @@ class Transitions @Inject()(tables: DBTables,
     (for {
       newState <- Future(request.body.as[StateName].state)
       currentState <- currentStateFromDB
-      isValid <- isTransitionValidCached(currentState, newState)
-      if isValid
+      _ <- isTransitionValidCached(currentState, newState).filter(identity).recover { case e: NoSuchElementException =>
+        throw new IllegalStateException("Requested transition is invalid")
+      }
       created  <- tables.recordTransition(entity, currentState, newState)
     } yield Ok((Transition.apply _).tupled(created))).recover {
-      case e: NoSuchElementException if e.getMessage == "Future.filter predicate is not satisfied" =>
-        BadRequest(ErrorBody("Requested transition is invalid"))
+      case e: IllegalStateException  => BadRequest(ErrorBody(e.getMessage))
       case e: NoSuchElementException => NotFound(ErrorBody("This entity does not exist"))
-      case e: JsResultException => BadRequest(ErrorBody("Could not parse state name from body"))
+      case e: JsResultException      => BadRequest(ErrorBody("Could not parse state name from body"))
       case e =>
         logger.error(e.toString)
         InternalServerError(e.toString)

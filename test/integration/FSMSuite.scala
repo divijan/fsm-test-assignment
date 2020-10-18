@@ -142,7 +142,7 @@ class FSMSuite extends PlaySpec with GuiceOneAppPerSuite with Results with Injec
       val errorJs = contentAsJson(resetResponse)
 
       status(resetResponse) mustBe 400
-      errorJs mustEqual Json.parse("""{ "error": "Will not reset an entity that is already in init state" }""")
+      errorJs mustEqual Json.parse("""{ "error": "Will not reset an entity which is already in init state" }""")
     }
 
     "should reset an entity correctly" in {

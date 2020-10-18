@@ -43,12 +43,9 @@ class Entities @Inject()(tables: DBTables,
       entityName <- Future(request.body.as[EntityName])
       created <- tables.createEntity(entityName.name)
     } yield Created(Entity.tupled(created))).recover {
-        case e: JsResultException =>
-          BadRequest(ErrorBody("Could not parse entity name from body"))
-        case e: SQLIntegrityConstraintViolationException =>
-          Conflict(ErrorBody("This entity already exists"))
-        case e: NoSuchElementException =>
-          BadRequest(ErrorBody("Cannot create an entity with no STT in the system"))
+        case e: JsResultException                        => BadRequest(ErrorBody("Could not parse entity name from body"))
+        case e: SQLIntegrityConstraintViolationException => Conflict(ErrorBody("This entity already exists"))
+        case e: NoSuchElementException                   => BadRequest(ErrorBody("Cannot create an entity with no STT in the system"))
         case e =>
           logger.error(e.toString)
           InternalServerError(e.toString)
@@ -66,8 +63,7 @@ class Entities @Inject()(tables: DBTables,
     tables.resetEntity(name).map{ e =>
       Ok(Entity.tupled(e))
     }.recover {
-      case e: NoSuchElementException if e.getMessage == "Action.withFilter failed" =>
-        BadRequest(ErrorBody("Will not reset an entity that is already in init state"))
+      case e: IllegalStateException => BadRequest(ErrorBody(e.getMessage))
     }
   }
 }

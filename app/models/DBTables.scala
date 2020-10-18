@@ -124,19 +124,19 @@ class DBTables @Inject()(dbConfigProvider: DatabaseConfigProvider)(implicit ec: 
     _ <- db.run {
       queryEntity(name).filter(_.stateName =!= initState).map(_.stateName).update(initState).filter(_ == 1) andThen
         (transitions += (name, None, initState, Instant.now()))
-    }
+    }.recover { case e: NoSuchElementException => throw new IllegalStateException("Will not reset an entity which is already in init state") }
   } yield (name, initState)
   def clearEntities() = db.run(entities.delete)
 
-  def recordTransition(entityName: String, currentState: String, newState: String) = {
+  def recordTransition(entityName: String, currentState: String, newState: String) =
     db.run {
       (for {
         _   <- queryEntity(entityName).map(_.stateName) update newState
         now <- DBIO.successful(Instant.now())
         _   <- (transitions += (entityName, Some(currentState), newState, now))
-       } yield now).transactionally
-    } map (now => (entityName, Some(currentState), newState, now))
-  }
+       } yield (entityName, Some(currentState), newState, now)).transactionally
+    }
+
   def getTransitionsFor(entityName: String): Future[Seq[(String, Option[String], String, Instant)]] = db.run {
     transitions.filter(_.entityName === entityName).sortBy(_.timestamp).result
   }
