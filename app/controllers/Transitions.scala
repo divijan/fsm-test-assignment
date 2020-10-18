@@ -54,11 +54,7 @@ class Transitions @Inject()(tables: DBTables,
     } yield Ok((Transition.apply _).tupled(created))).recover {
       case e: IllegalStateException  => BadRequest(ErrorBody(e.getMessage))
       case e: NoSuchElementException => NotFound(ErrorBody("This entity does not exist"))
-      case e: JsResultException      => BadRequest(ErrorBody("Could not parse state name from body"))
-      case e =>
-        logger.error(e.toString)
-        InternalServerError(e.toString)
-    }
+    }.recover(genericExceptionMapper("state name", logger))
   }
 }
 
