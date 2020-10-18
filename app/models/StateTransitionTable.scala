@@ -5,8 +5,6 @@ case class StateTransitionTable(initialState: String, table: Map[String, Set[Str
 }
 
 object StateTransitionTable {
-  def from(init: String, seq: Seq[(String, String)]) = StateTransitionTable(init,
-    seq.groupBy(_._1)
-      .view.map { case (k, v) => (k, v.map(_._2).toSet) }
-      .toMap)
+  def from(init: String, seq: Seq[(String, String)]) = StateTransitionTable(init, seq.groupMap(_._1)(_._2)
+                                                                                     .view.mapValues(_.toSet).toMap)
 }

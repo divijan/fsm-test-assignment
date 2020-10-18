@@ -87,7 +87,7 @@ class FSMSuite extends PlaySpec with GuiceOneAppPerSuite with Results with Injec
       val transitions = bodyJs.as[Seq[Transition]]
 
       status(transitionsResult) mustBe 200
-      transitions.size mustEqual 1
+      transitions.sizeIs == 1 mustBe true
       val t = transitions.head
       t.entity mustEqual "1"
       t.from mustBe None
@@ -132,7 +132,7 @@ class FSMSuite extends PlaySpec with GuiceOneAppPerSuite with Results with Injec
       val bodyJs = contentAsJson(transitionsResult)
       val transitions = bodyJs.as[Seq[Transition]]
 
-      transitions.size mustBe 2
+      transitions.sizeIs == 2 mustBe true
       transitions.map(t => (t.entity, t.from, t.to)) mustEqual Seq(("1", None, "init"), ("1", Some("init"), "pending"))
     }
 

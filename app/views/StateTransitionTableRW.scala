@@ -12,8 +12,8 @@ object StateTransitionTableRW {
   implicit val stateTransitionTableReads: Reads[StateTransitionTable] =
     (JsPath \ "states").read[Set[State]].map { set =>
       val initStates = set.filter(_.isInit)
-      if (initStates.size != 1) {
-        throw new NotOneInitStateException("There should be exactly one init state!")
+      if (initStates.sizeIs != 1) {
+        throw NotOneInitStateException("There should be exactly one init state!")
       } else {
         //TODO: warn about unreachable states
         //val nonInitStates = set.filterNot(_.isInit)
