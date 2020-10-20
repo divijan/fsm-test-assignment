@@ -2,12 +2,14 @@ package models
 
 import java.lang.IllegalStateException
 import java.time.Instant
+import java.util.NoSuchElementException
 
 import javax.inject.{Inject, Singleton}
 import org.h2.jdbc.JdbcSQLIntegrityConstraintViolationException
 import play.api.db.slick.DatabaseConfigProvider
 import slick.jdbc.JdbcProfile
 import slick.sql.SqlProfile.ColumnOption.SqlType
+import org.postgresql.util.PSQLException
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -114,7 +116,10 @@ class DBTables @Inject()(dbConfigProvider: DatabaseConfigProvider)(implicit ec: 
       _ <- (entities += (name, stateName))
       _  <- (transitions += (name, None, stateName, Instant.now()))
     } yield (name, stateName)
-  ).recover { case e: NoSuchElementException => throw new NoSuchElementException("No STT. Init state is undefined") }
+  ).recover {
+    case _: NoSuchElementException => throw new NoSuchElementException("No STT. Init state is undefined")
+    case _: JdbcSQLIntegrityConstraintViolationException | _:PSQLException => throw new EntityExistsException(s"entity $name already exists!")
+  }
   def deleteEntity(name: String) = db.run(
     queryEntity(name).delete andThen
     transitions.filter(_.entityName === name).delete

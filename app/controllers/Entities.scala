@@ -43,8 +43,8 @@ class Entities @Inject()(tables: DBTables,
       entityName <- Future(request.body.as[EntityName])
       created <- tables.createEntity(entityName.name)
     } yield Created(Entity.tupled(created))).recover {
-        case e: SQLIntegrityConstraintViolationException => Conflict(ErrorBody("This entity already exists"))
-        case e: NoSuchElementException                   => BadRequest(ErrorBody("Cannot create an entity with no STT in the system"))
+        case _: EntityExistsException      => Conflict(ErrorBody("This entity already exists"))
+        case _: NoSuchElementException  => BadRequest(ErrorBody("Cannot create an entity with no STT in the system"))
     }.recover(genericExceptionMapper("entity name", logger))
   }
 
