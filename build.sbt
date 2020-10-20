@@ -28,6 +28,7 @@ lazy val root = (project in file("."))
       "-deprecation",
       "-Xfatal-warnings"
     ),
+    javaOptions in Test += "-Dconfig.file=conf/test.conf",
 
     maintainer in Docker := "Yar Ilich <yar.ilich@gmail.com>",
     dockerChmodType          := DockerChmodType.UserGroupWriteExecute,

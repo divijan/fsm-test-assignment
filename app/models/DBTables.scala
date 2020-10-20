@@ -157,4 +157,6 @@ class DBTables @Inject()(dbConfigProvider: DatabaseConfigProvider)(implicit ec: 
       initStates.delete
     )
   }
+
+  val profileName = dbConfig.profileName
 }
