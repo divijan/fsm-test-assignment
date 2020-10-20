@@ -35,9 +35,10 @@ class States @Inject()(tables: DBTables,
       val stt = request.body.as[StateTransitionTable]
 
       val flatTransitions = stt.table.toList.flatMap { case (name, states) => states.map(name -> _) }
-      tables.replaceSTT(stt.initialState, flatTransitions)
-
-      cache.set("STT", stt) map (_ => Created(returnValue))
+      for {
+        _ <- tables.replaceSTT(stt.initialState, flatTransitions)
+        _ <- cache.set("STT", stt)
+      } yield Created(returnValue)
     } catch {
       case NotOneInitStateException(m) => Future.successful(BadRequest(ErrorBody(m)))
     }

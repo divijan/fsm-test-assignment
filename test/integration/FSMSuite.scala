@@ -22,7 +22,7 @@ class FSMSuite extends PlaySpec with GuiceOneAppPerSuite with Results with Injec
 
   override def beforeAll(): Unit = {
     val db = inject[DBTables]
-    db.clearAll()
+    await(db.clearAll())
   }
 
   "FSM application" should {
@@ -74,8 +74,8 @@ class FSMSuite extends PlaySpec with GuiceOneAppPerSuite with Results with Injec
     }
 
     "return a single transition for just created entity" in {
-      val createSTTRequest       = FakeRequest(POST, "/states").withBody(statesJs)
-      val createdSTT = route(app, createSTTRequest).get
+      val createSTTRequest = FakeRequest(POST, "/states").withBody(statesJs)
+      val createdSTT       = route(app, createSTTRequest).get
       status(createdSTT) mustBe 201
 
       val createdEntity = route(app, FakeRequest(POST, "/entities").withBody(Json.parse("""{ "name": "1" }"""))).get
@@ -136,7 +136,7 @@ class FSMSuite extends PlaySpec with GuiceOneAppPerSuite with Results with Injec
       transitions.map(t => (t.entity, t.from, t.to)) mustEqual Seq(("1", None, "init"), ("1", Some("init"), "pending"))
     }
 
-    "should refuse to reset an entity in init state" in {
+    "refuse to reset an entity in init state" in {
       val resetReq = FakeRequest(PATCH, "/entities/2")
       val resetResponse = route(app, resetReq).get
       val errorJs = contentAsJson(resetResponse)
@@ -145,7 +145,7 @@ class FSMSuite extends PlaySpec with GuiceOneAppPerSuite with Results with Injec
       errorJs mustEqual Json.parse("""{ "error": "Will not reset an entity which is already in init state" }""")
     }
 
-    "should reset an entity correctly" in {
+    "reset an entity correctly" in {
       val resetReq = FakeRequest(PATCH, "/entities/1")
       val resetResponse = route(app, resetReq).get
 
@@ -163,7 +163,7 @@ class FSMSuite extends PlaySpec with GuiceOneAppPerSuite with Results with Injec
       )
     }
 
-    "should drop transition log when deleting an entity" in {
+    "drop transition log when deleting an entity" in {
       val deleteReq = FakeRequest(DELETE, "/entities/1")
       val deleteResponse = route(app, deleteReq).get
       status(deleteResponse) must be(204)
