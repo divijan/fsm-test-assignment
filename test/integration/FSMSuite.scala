@@ -74,8 +74,8 @@ class FSMSuite extends PlaySpec with GuiceOneAppPerSuite with Results with Injec
     }
 
     "return a single transition for just created entity" in {
-      val createSTTRequest       = FakeRequest(POST, "/states").withBody(statesJs)
-      val createdSTT = route(app, createSTTRequest).get
+      val createSTTRequest = FakeRequest(POST, "/states").withBody(statesJs)
+      val createdSTT       = route(app, createSTTRequest).get
       status(createdSTT) mustBe 201
 
       val createdEntity = route(app, FakeRequest(POST, "/entities").withBody(Json.parse("""{ "name": "1" }"""))).get
