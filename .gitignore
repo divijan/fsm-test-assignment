@@ -35,3 +35,7 @@ build
 
 # h2 db
 *.db
+
+# vscode
+.vscode/
+.metals/

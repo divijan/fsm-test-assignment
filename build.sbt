@@ -22,8 +22,8 @@ lazy val root = (project in file("."))
     ),
     scalacOptions ++= Seq(
       "-feature",
-      "-deprecation",
-      "-Xfatal-warnings"
+      "-deprecation"
+      //"-Xfatal-warnings" //why did it have effect only in IDE?
     ),
 
     maintainer in Docker := "Yar Ilich <yar.ilich@gmail.com>",

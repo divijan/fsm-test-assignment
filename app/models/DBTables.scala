@@ -1,13 +1,9 @@
 package models
 
-import java.lang.IllegalStateException
 import java.time.Instant
-
 import javax.inject.{Inject, Singleton}
-import org.h2.jdbc.JdbcSQLIntegrityConstraintViolationException
 import play.api.db.slick.DatabaseConfigProvider
 import slick.jdbc.JdbcProfile
-import slick.sql.SqlProfile.ColumnOption.SqlType
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -17,7 +13,8 @@ import scala.concurrent.{ExecutionContext, Future}
  * @param dbConfigProvider The Play db config provider. Play will inject this for you.
  */
 @Singleton
-class DBTables @Inject()(dbConfigProvider: DatabaseConfigProvider)(implicit ec: ExecutionContext) {
+class DBTables @Inject()(dbConfigProvider: DatabaseConfigProvider)(implicit ec: ExecutionContext)
+extends AppRepository with TransitionLog {
   private val dbConfig = dbConfigProvider.get[JdbcProfile]
 
   import dbConfig._
@@ -38,24 +35,20 @@ class DBTables @Inject()(dbConfigProvider: DatabaseConfigProvider)(implicit ec: 
     def name = column[String]("name", O.PrimaryKey)
     def * = name
   }
-  //todo: remove this table because it duplicates the contents of Transitions table
-  private class EntitiesTable(tag: Tag) extends Table[(String, String)](tag, "entities") {
+
+  private class EntitiesTable(tag: Tag) extends Table[Entity](tag, "entities") {
     def name = column[String]("name", O.PrimaryKey)
     def stateName = column[String]("state")
-    def * = (name, stateName)
+    def * = (name, stateName).mapTo[Entity]
   }
 
-  /**
-   * Stores history of transitions throughout the system
-   * @param tag
-   */
-  private class TransitionsTable(tag: Tag) extends Table[(String, Option[String], String, Instant)](tag, "transitions") {
+  private class TransitionsTable(tag: Tag) extends Table[Transition](tag, "transitions") {
     def entityName = column[String]("entity_name")
     def from = column[Option[String]]("from")
     def to = column[String]("to")
     //we never use default functionality and h2 can only RETURNING an AutoInc column, so no default here
     def timestamp = column[Instant]("timestamp")
-    def * = (entityName, from, to, timestamp)
+    def * = (entityName, from, to, timestamp).mapTo[Transition]
   }
 
   private object Queries {
@@ -67,8 +60,7 @@ class DBTables @Inject()(dbConfigProvider: DatabaseConfigProvider)(implicit ec: 
 
     val transitions = TableQuery[TransitionsTable]
 
-    def queryInitState =
-      initStates.result.head
+    def queryInitState = initStates.result.head
 
     def queryEntities = entities.result
 
@@ -79,72 +71,92 @@ class DBTables @Inject()(dbConfigProvider: DatabaseConfigProvider)(implicit ec: 
      */
     def queryValidTransitions = states.result
 
-    def queryIsTransitionValid(from: String, to: String) =
+    def queryIsTransitionValid(from: State, to: State) =
       states.filter(s => (s.from === from) && (s.to === to)).exists.result
 
     def queryISTransitions = for {
       initState <- queryInitState
       transitions <- queryValidTransitions
-    } yield (initState, transitions)
+    } yield StateTransitionTable(initState, transitions.groupMap(_._1)(_._2).view.mapValues(_.toSet).toMap)
   }
 
 
   import Queries._
 
-  def getSTT(): Future[(String, Seq[(String, String)])] = db.run(queryISTransitions)
-  def getInitState(): Future[String] = db.run(queryInitState)
-  def replaceSTT(initState: String, transitions: Seq[(String, String)]) = db.run {
+  override def getStt(): Future[StateTransitionTable] = db.run(queryISTransitions)
+
+  override def getInitState(): Future[State] = db.run(queryInitState)
+
+  override def replaceStt(stt: StateTransitionTable) = db.run {
     DBIO.seq(
       initStates.delete,
-      (initStates += initState),
+      initStates += stt.initialState,
       states.delete,
-      (states ++= transitions)
+      states ++= stt.table.flatMap { case (state, set) => set.map(state -> _).toSeq }
     )
   }
-  def isTransitionValid(from: String, to: String) = db.run {
+
+  override def isTransitionValid(from: String, to: String) = db.run {
     queryIsTransitionValid(from, to)
   }
 
 
-  def getEntities(): Future[Seq[(String, String)]] = db.run(queryEntities)
-  def getEntity(name: String): Future[Option[(String, String)]] = db.run(queryEntity(name).take(1).result.headOption)
-  def createEntity(name: String): Future[(String, String)] = db.run(
+  override def getEntities(): Future[Seq[Entity]] = db.run(queryEntities)
+
+  override def getEntity(name: String): Future[Option[Entity]] = db.run(
+    queryEntity(name)
+      .take(1)
+      .result
+      .headOption)
+
+  override def createEntity(name: String): Future[Entity] = db.run(
     for {
       stateName <- initStates.take(1).result.head
-      _ <- (entities += (name, stateName))
-      _  <- (transitions += (name, None, stateName, Instant.now()))
-    } yield (name, stateName)
-  ).recover { case e: NoSuchElementException => throw new NoSuchElementException("No STT. Init state is undefined") }
-  def deleteEntity(name: String) = db.run(
+      newEntity = Entity(name, stateName)
+      _ <- entities += newEntity
+      _  <- transitions += Transition(name, None, stateName, Instant.now())
+    } yield newEntity
+  ).recover {
+    case _: NoSuchElementException =>
+      throw new NoSuchElementException("State Transition Table is not defined. Init state is undefined")
+  }
+
+  override def deleteEntity(name: String): Future[Unit] = db.run(
     queryEntity(name).delete andThen
     transitions.filter(_.entityName === name).delete
-  )
-  def resetEntity(name: String) = for {
+  ).map(_ => ())
+
+  override def resetEntity(name: String) = for {
     initState <- getInitState()
     _ <- db.run {
       queryEntity(name).filter(_.stateName =!= initState).map(_.stateName).update(initState).filter(_ == 1) andThen
-        (transitions += (name, None, initState, Instant.now()))
+        (transitions += Transition(name, None, initState, Instant.now()))
     }
   } yield (name, initState)
-  def clearEntities() = db.run(entities.delete)
 
-  def recordTransition(entityName: String, currentState: String, newState: String) = {
-    db.run {
-      (for {
-        _   <- queryEntity(entityName).map(_.stateName) update newState
-        now <- DBIO.successful(Instant.now())
-        _   <- (transitions += (entityName, Some(currentState), newState, now))
-       } yield now).transactionally
-    } map (now => (entityName, Some(currentState), newState, now))
+  override def clearEntities() = db.run(entities.delete).map(_ => ())
+
+  override def recordTransition(entityName: String, newState: String) = db.run {
+    (for {
+      currentState <- queryEntity(entityName).map(_.stateName).result.headOption
+      _   <- queryEntity(entityName).map(_.stateName) update newState
+      now <- DBIO.successful(Instant.now())
+      _   <- transitions += Transition(entityName, currentState, newState, now)
+     } yield ()).transactionally
   }
-  def getTransitionsFor(entityName: String): Future[Seq[(String, Option[String], String, Instant)]] = db.run {
-    transitions.filter(_.entityName === entityName).sortBy(_.timestamp).result
+
+  override def getTransitionsFor(entityName: String): Future[Seq[Transition]] = db.run {
+    transitions
+      .filter(_.entityName === entityName)
+      .sortBy(_.timestamp)
+      .result
   }
-  def getTransitions(): Future[Seq[(String, Option[String], String, Instant)]] = db.run {
+
+  override def getTransitions(): Future[Seq[Transition]] = db.run {
     transitions.sortBy(t => (t.entityName, t.timestamp)).result
   }
 
-  def clearAll() = db.run {
+  override def clearAll(): Future[Unit] = db.run { //todo: parallelize queries if possible
     DBIO.seq(
       transitions.delete,
       entities.delete,

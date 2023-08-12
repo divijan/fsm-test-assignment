@@ -1,7 +1,7 @@
 package integration
 
 import controllers.{States, Transitions}
-import models.DBTables
+import models.{DBTables, Entity, StateTransitionTable, Transition}
 import org.scalatest.BeforeAndAfterAll
 import org.scalatestplus.play._
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
@@ -9,10 +9,10 @@ import play.api.libs.json.Json
 import play.api.mvc._
 import play.api.test.Helpers._
 import play.api.test._
-import views.{ErrorBody, StateTransitionTableRW, Transition}
-import models.StateTransitionTable
-import Transition._
+import views.{ErrorBody, StateTransitionTableRW, TransitionRW, EntityRW}
+import TransitionRW._
 import StateTransitionTableRW._
+import EntityRW._
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Using
@@ -116,11 +116,10 @@ class FSMSuite extends PlaySpec with GuiceOneAppPerSuite with Results with Injec
       val moveRequest = FakeRequest(PUT, "/transitions/1").withBody(Json.parse("""{ "state": "pending" }"""))
       val result = route(app, moveRequest).get
       val bodyJs = contentAsJson(result)
-      val response = bodyJs.as[Transition]
+      val response = bodyJs.as[Entity]
 
       status(result) mustBe 200
-      response.from mustEqual Some("init")
-      response.to mustEqual "pending"
+      response.state mustEqual "pending"
     }
 
     "still return a valid log of transitions for one entity when second entity exists" in {
@@ -136,7 +135,7 @@ class FSMSuite extends PlaySpec with GuiceOneAppPerSuite with Results with Injec
       transitions.map(t => (t.entity, t.from, t.to)) mustEqual Seq(("1", None, "init"), ("1", Some("init"), "pending"))
     }
 
-    "should refuse to reset an entity in init state" in {
+    "refuse to reset an entity in init state" in {
       val resetReq = FakeRequest(PATCH, "/entities/2")
       val resetResponse = route(app, resetReq).get
       val errorJs = contentAsJson(resetResponse)
@@ -145,7 +144,7 @@ class FSMSuite extends PlaySpec with GuiceOneAppPerSuite with Results with Injec
       errorJs mustEqual Json.parse("""{ "error": "Will not reset an entity that is already in init state" }""")
     }
 
-    "should reset an entity correctly" in {
+    "reset an entity correctly" in {
       val resetReq = FakeRequest(PATCH, "/entities/1")
       val resetResponse = route(app, resetReq).get
 
@@ -153,7 +152,7 @@ class FSMSuite extends PlaySpec with GuiceOneAppPerSuite with Results with Injec
 
       val transitions = await(inject[DBTables].getTransitionsFor("1"))
       val tWithoutTimestamps = transitions.map { t =>
-        val (_, from, to, _) = t
+        val Transition(_, from, to, _) = t
         (from, to)
       }
       tWithoutTimestamps mustEqual Seq(
@@ -163,7 +162,7 @@ class FSMSuite extends PlaySpec with GuiceOneAppPerSuite with Results with Injec
       )
     }
 
-    "should drop transition log when deleting an entity" in {
+    "drop transition log when deleting an entity" in {
       val deleteReq = FakeRequest(DELETE, "/entities/1")
       val deleteResponse = route(app, deleteReq).get
       status(deleteResponse) must be(204)

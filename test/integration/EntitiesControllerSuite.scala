@@ -1,7 +1,7 @@
 package integration
 
 import controllers.Entities
-import models.DBTables
+import models.{DBTables, StateTransitionTable}
 import org.scalatest.BeforeAndAfterAll
 import org.scalatestplus.play._
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
@@ -20,17 +20,18 @@ class EntitiesControllerSuite extends PlaySpec with GuiceOneAppPerSuite with Res
     implicit val execCtx = inject[ExecutionContext]
     val tables = inject[DBTables]
     val initState = "init"
-    val states = Seq("init" -> "finished")
+    val states = Map(initState -> Set("finished"))
+    val stt = StateTransitionTable(initState, states)
     await(
       for {
         _ <- tables.clearAll()
-        _ <- tables.replaceSTT(initState, states)
+        _ <- tables.replaceStt(stt)
       } yield None
     )
   }
 
   "Entities controller" should {
-    val entitiesController = new Entities(inject[DBTables], Helpers.stubControllerComponents())(inject[ExecutionContext])
+    val entitiesController = new Entities(inject[DBTables], inject[DBTables], Helpers.stubControllerComponents())(inject[ExecutionContext])
     val entity1NameJs      = Json.parse("""{"name": "1"}""")
     val entity1Js          = Json.parse("""{"entity": {"name": "1", "state": "init"}}""")
     val entityNotExists    = Json.toJson(ErrorBody("Requested entity does not exist"))

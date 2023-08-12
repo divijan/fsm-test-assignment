@@ -1,7 +1,7 @@
 package unit
 
 import controllers.States
-import models.DBTables
+import models.{DBTables, StateTransitionTable}
 import org.scalatest.TestSuite
 import org.scalatest.wordspec.AsyncWordSpec
 import org.scalatest.matchers.must.Matchers
@@ -21,20 +21,21 @@ class DBSuite extends PlaySpec with GuiceOneAppPerSuite with Injecting {
       val tables = inject[DBTables]
       implicit val ec = inject[ExecutionContext]
       val start = "Start"
-      val states = Seq(start -> "finish") //Using(getClass.getResourceAsStream("../states.json"))(Json.parse _).get.as[Seq[State]]
+      val states = Map(start -> Set("finish")) //Using(getClass.getResourceAsStream("../states.json"))(Json.parse _).get.as[Seq[State]]
+      val stt = StateTransitionTable(start, states)
 
       val readStt = for {
-        _ <- tables.replaceSTT(start, states)
-        read <- tables.getSTT()
+        _ <- tables.replaceStt(stt)
+        read <- tables.getStt()
       } yield read
 
-      readStt.map { case (init, seq) =>
+      readStt.map { case StateTransitionTable(init, map) =>
         init mustBe "start"
-        seq mustEqual states
+        map mustEqual states
       }
-      val (init, seq) = await(readStt)
+      val StateTransitionTable(init, map) = await(readStt)
       init mustBe start
-      seq mustEqual states
+      map mustEqual states
     }
   }
 }

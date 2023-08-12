@@ -1,7 +1,7 @@
 package models
 
-case class StateTransitionTable(initialState: String, table: Map[String, Set[String]]) {
-  def isTransitionValid(from: String, to: String) = table.get(from).exists(_ contains to)
+case class StateTransitionTable(initialState: State, table: Map[State, Set[State]]) {
+  def isTransitionValid(from: State, to: State) = table.get(from).exists(_ contains to)
 }
 
 object StateTransitionTable {
