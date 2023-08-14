@@ -1,7 +1,6 @@
 package integration
 
-import controllers.{States, Transitions}
-import models.{DBTables, Entity, StateTransitionTable, Transition}
+import models.{DBTables, Entity, Transition}
 import org.scalatest.BeforeAndAfterAll
 import org.scalatestplus.play._
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
@@ -9,12 +8,11 @@ import play.api.libs.json.Json
 import play.api.mvc._
 import play.api.test.Helpers._
 import play.api.test._
-import views.{ErrorBody, StateTransitionTableRW, TransitionRW, EntityRW}
+import views.{ErrorBody, TransitionRW, EntityRW}
 import TransitionRW._
-import StateTransitionTableRW._
 import EntityRW._
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 import scala.util.Using
 
 class FSMSuite extends PlaySpec with GuiceOneAppPerSuite with Results with Injecting

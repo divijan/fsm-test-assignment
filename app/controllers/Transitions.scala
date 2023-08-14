@@ -1,16 +1,15 @@
 package controllers
 
-import javax.inject._
 import models._
 import play.api.Logging
 import play.api.cache.AsyncCacheApi
-import play.api.libs.json.{JsResultException, Json}
+import play.api.libs.json.JsResultException
 import play.api.mvc._
-import views.{ErrorBody, StateName, TransitionRW, EntityRW}
-import EntityRW._
-import TransitionRW._
-import Json._
+import views.EntityRW._
+import views.TransitionRW._
+import views.{ErrorBody, StateName}
 
+import javax.inject._
 import scala.concurrent.{ExecutionContext, Future}
 
 class Transitions @Inject()(appRepo: AppRepository,
@@ -41,6 +40,8 @@ class Transitions @Inject()(appRepo: AppRepository,
 
   // todo: how about separate appRepo actions from transactionLog?
   def move(entityName: String) = Action.async(parse.json) { implicit request =>
+    implicit val entityWrites = standaloneEntityWrites
+
     def isTransitionValidCached(currentState: String, newState: String): Future[Boolean] = {
       val stt = cache.getOrElseUpdate("STT")(appRepo.getStt())
       stt.map(_.isTransitionValid(currentState, newState))

@@ -8,9 +8,7 @@ import play.api.libs.ws.WSClient
 import play.api.mvc._
 import play.api.test.Helpers._
 import play.api.test._
-import views.ErrorBody
 
-import scala.concurrent.{ExecutionContext, Future}
 
 class ServerSuite extends PlaySpec with GuiceOneServerPerSuite with Results with Injecting {
 

@@ -1,7 +1,6 @@
 import com.google.inject.{Inject, Singleton}
 import play.api.{Environment, Logging, OptionalSourceMapper}
 import play.api.http.JsonHttpErrorHandler
-import play.api.libs.json.Json
 import play.api.mvc.{RequestHeader, Result, Results}
 import views.ErrorBody
 import controllers._

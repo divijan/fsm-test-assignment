@@ -36,8 +36,8 @@ class Entities @Inject()(appRepo: AppRepository,
 
     (for {
       entityName <- Future(request.body.as[EntityName])
-      _ <- appRepo.createEntity(entityName.name)
-    } yield Created(Entity(entityName.name, "initState"))).recover {
+      newEntity <- appRepo.createEntity(entityName.name)
+    } yield Created(newEntity)).recover {
         case _: JsResultException =>
           BadRequest(ErrorBody("Could not parse entity name from body"))
         case _: SQLIntegrityConstraintViolationException =>
