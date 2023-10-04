@@ -92,7 +92,13 @@ extends AppRepository with TransitionLog {
       initStates.delete,
       initStates += stt.initialState,
       states.delete,
-      states ++= stt.table.flatMap { case (state, set) => set.map(state -> _).toSeq }
+      states ++= stt.table.flatMap { case (state, set) => set.map(state -> _).toSeq },
+      transitions.delete,
+      entities.map(_.stateName).update(stt.initialState),
+      for {
+        entityNames <- entities.map(_.name).result
+        res <- transitions ++= entityNames.map(e => Transition(e, None, stt.initialState, Instant.now()))
+      } yield res
     )
   }
 

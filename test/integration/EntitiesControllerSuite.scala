@@ -11,6 +11,7 @@ import play.api.test.Helpers._
 import play.api.test._
 import views.ErrorBody
 import ErrorBody._
+import play.api.cache.AsyncCacheApi
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -31,7 +32,7 @@ class EntitiesControllerSuite extends PlaySpec with GuiceOneAppPerSuite with Res
   }
 
   "Entities controller" should {
-    val entitiesController = new Entities(inject[DBTables], inject[DBTables], Helpers.stubControllerComponents())(inject[ExecutionContext])
+    val entitiesController = new Entities(inject[DBTables], inject[DBTables], inject[AsyncCacheApi], Helpers.stubControllerComponents())(inject[ExecutionContext])
     val entity1NameJs      = Json.parse("""{"name": "1"}""")
     val entity1Js          = Json.parse("""{"entity": {"name": "1", "state": "init"}}""")
     val entityNotExists    = Json.toJson(ErrorBody("Requested entity does not exist"))

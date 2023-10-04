@@ -27,16 +27,17 @@ class States @Inject()(appRepo: AppRepository,
   }
 
 
-  //todo: what happens with existing entities when we do this? Re-initialize them and drop the transaction log?
   def replace = Action.async(parse.json) { implicit request =>
     val returnValue = request.body
 
     try {
       val stt = request.body.as[StateTransitionTable]
-      appRepo.replaceStt(stt)
-      cache.set("STT", stt) map (_ => Created(returnValue))
+      for { // need to make sure long replaceStt operation is completed before responding
+        _ <- appRepo.replaceStt(stt)
+        _ <- cache.set("STT", stt)
+      } yield Created(returnValue)
     } catch {
-      case NotOneInitStateException(m) => Future.successful(BadRequest(ErrorBody(m)))
+      case MultipleInitStatesException(m) => Future.successful(BadRequest(ErrorBody(m)))
     }
   }
 

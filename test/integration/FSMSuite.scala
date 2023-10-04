@@ -8,7 +8,7 @@ import play.api.libs.json.Json
 import play.api.mvc._
 import play.api.test.Helpers._
 import play.api.test._
-import views.{ErrorBody, TransitionRW, EntityRW}
+import views.{EntityRW, ErrorBody, TransitionRW}
 import TransitionRW._
 import EntityRW._
 
@@ -24,8 +24,6 @@ class FSMSuite extends PlaySpec with GuiceOneAppPerSuite with Results with Injec
   }
 
   "FSM application" should {
-
-    //val transitionsController = new Transitions(inject[DBTables], Helpers.stubControllerComponents())(inject[ExecutionContext])
     val statesJs               = Using(getClass.getResourceAsStream("../states.json"))(Json.parse _).get
 
     "fail to get a non-existent STT" in {
@@ -93,7 +91,7 @@ class FSMSuite extends PlaySpec with GuiceOneAppPerSuite with Results with Injec
     }
 
     "refuse to make an invalid transition" in {
-      val moveRequest = FakeRequest(PUT, "/transitions/1").withBody(Json.parse("""{ "state": "finished" }"""))
+      val moveRequest = FakeRequest(PATCH, "/entities/1/state").withBody(Json.parse("""{ "state": "finished" }"""))
       val result = route(app, moveRequest).get
       val errorJs = contentAsJson(result)
 
@@ -102,7 +100,7 @@ class FSMSuite extends PlaySpec with GuiceOneAppPerSuite with Results with Injec
     }
 
     "refuse to move a non-existent entity" in {
-      val moveRequest = FakeRequest(PUT, "/transitions/2").withBody(Json.parse("""{ "state": "pending" }"""))
+      val moveRequest = FakeRequest(PATCH, "/entities/2/state").withBody(Json.parse("""{ "state": "pending" }"""))
       val result = route(app, moveRequest).get
       val errorJs = contentAsJson(result)
 
@@ -111,7 +109,7 @@ class FSMSuite extends PlaySpec with GuiceOneAppPerSuite with Results with Injec
     }
 
     "make a valid transition" in {
-      val moveRequest = FakeRequest(PUT, "/transitions/1").withBody(Json.parse("""{ "state": "pending" }"""))
+      val moveRequest = FakeRequest(PATCH, "/entities/1/state").withBody(Json.parse("""{ "state": "pending" }"""))
       val result = route(app, moveRequest).get
       val bodyJs = contentAsJson(result)
       val response = bodyJs.as[Entity]
@@ -158,6 +156,22 @@ class FSMSuite extends PlaySpec with GuiceOneAppPerSuite with Results with Injec
         (Some("init"), "pending"),
         (None, "init")
       )
+    }
+
+    "replace an STT" in {
+      val db = inject[DBTables]
+      val states2 = Using(getClass.getResourceAsStream("../states2.json"))(Json.parse _).get
+
+      val createSTTRequest = FakeRequest(POST, "/states").withBody(states2)
+      val createdSTT = route(app, createSTTRequest).get
+      status(createdSTT) mustBe 201
+
+      val entitiesAfter = await(db.getEntities())
+      entitiesAfter must contain only (Entity("1", "s0"), Entity("2", "s0"))
+
+      val transitionsAfter = await(db.getTransitions())
+      transitionsAfter.map(_.entity) must contain only ("1", "2")
+      transitionsAfter.map(_.to) must contain only ("s0")
     }
 
     "drop transition log when deleting an entity" in {

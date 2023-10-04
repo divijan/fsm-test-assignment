@@ -16,10 +16,10 @@ POST    /entities                   controllers.Entities.create
 DELETE  /entities/:name             controllers.Entities.delete(name)
 # reset specified entity back into init state
 PATCH   /entities/:name             controllers.Entities.reset(name)
+# move the given entity to the given state
+PATCH   /entities/:name/state       controllers.Entities.move(name)
 
 # get a history of transitions for all entities in this system
 GET     /transitions                controllers.Transitions.index
 # get a history of transitions for the given entity
 GET     /transitions/:name          controllers.Transitions.show(name)
-# move the given entity to the given state
-PUT     /transitions/:name          controllers.Transitions.move(name)

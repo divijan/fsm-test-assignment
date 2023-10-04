@@ -7,13 +7,13 @@ import models.StateTransitionTable
 
 
 object StateTransitionTableRW {
-  case class NotOneInitStateException(msg: String) extends Exception
+  case class MultipleInitStatesException(msg: String) extends Exception
 
   implicit val stateTransitionTableReads: Reads[StateTransitionTable] =
     (JsPath \ "states").read[Set[State]].map { set =>
       val initStates = set.filter(_.isInit)
       if (initStates.size != 1) {
-        throw new NotOneInitStateException("There should be exactly one init state!")
+        throw new MultipleInitStatesException("There should be exactly one init state!")
       } else {
         //TODO: warn about unreachable states
         //val nonInitStates = set.filterNot(_.isInit)

@@ -1,0 +1,21 @@
+{
+  "states": [
+    {
+      "name": "s0",
+      "isInit": true,
+      "transitions": ["p1", "p2"]
+    },
+    {
+      "name": "t",
+      "transitions": []
+    },
+    {
+      "name": "p1",
+      "transitions": ["t", "p2"]
+    },
+    {
+      "name": "p2",
+      "transitions": ["p1"]
+    }
+  ]
+}
