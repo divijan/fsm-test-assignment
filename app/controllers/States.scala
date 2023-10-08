@@ -8,6 +8,7 @@ import play.api.cache.AsyncCacheApi
 import views.ErrorBody
 import views.StateTransitionTableRW._
 import models.StateTransitionTable
+import models.repositories.AppRepository
 
 import scala.concurrent.{ExecutionContext, Future}
 

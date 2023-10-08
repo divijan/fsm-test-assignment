@@ -3,6 +3,7 @@ package controllers
 import java.sql.SQLIntegrityConstraintViolationException
 import javax.inject._
 import models._
+import models.repositories.{AppRepository, TransitionLog}
 import play.api.Logging
 import play.api.cache.AsyncCacheApi
 import play.api.libs.json.JsResultException

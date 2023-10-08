@@ -1,10 +1,12 @@
-package models
+package models.db.slick
 
-import java.time.Instant
-import javax.inject.{Inject, Singleton}
+import models.repositories.{AppRepository, TransitionLog}
+import models.{Entity, State, StateTransitionTable, Transition}
 import play.api.db.slick.DatabaseConfigProvider
 import slick.jdbc.JdbcProfile
 
+import java.time.Instant
+import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 /**

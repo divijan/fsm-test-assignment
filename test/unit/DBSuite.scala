@@ -1,7 +1,8 @@
 package unit
 
 import controllers.States
-import models.{DBTables, StateTransitionTable}
+import models.StateTransitionTable
+import models.db.slick.DBTables
 import org.scalatest.TestSuite
 import org.scalatest.wordspec.AsyncWordSpec
 import org.scalatest.matchers.must.Matchers

@@ -11,6 +11,9 @@ lazy val root = (project in file("."))
     libraryDependencies ++= Seq(
       guice,
       caffeine,
+      //using reactiveMongo because scala mongo driver is at EOL
+      "org.reactivemongo" %% "play2-reactivemongo" % "1.1.0-play28-RC11",
+      "org.reactivemongo" %% "reactivemongo-play-json-compat" % "1.1.0-play28-RC11",
       "com.typesafe.play" %% "play-slick" % "5.0.0",
       "com.typesafe.play" %% "play-slick-evolutions" % "5.0.0",
       "com.h2database" % "h2" % "1.4.199",

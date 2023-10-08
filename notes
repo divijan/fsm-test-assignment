@@ -1,0 +1,6 @@
+AppRepository's several operations now depend on TransitionLog operations in an implicit way. Because
+ of this we cannot, for example, use different DB backends for them. The
+solution is to only leave the simplest building blocks of queries in these interfaces and push the
+responsibility of assembling them into correct business actions to the controllers.
+It's not clear whether it is a drawback that in this case for Slick that queries will have to be
+combined on the level of Futures instead of DBIO actions

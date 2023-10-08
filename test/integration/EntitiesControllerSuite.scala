@@ -1,7 +1,7 @@
 package integration
 
 import controllers.Entities
-import models.{DBTables, StateTransitionTable}
+import models.StateTransitionTable
 import org.scalatest.BeforeAndAfterAll
 import org.scalatestplus.play._
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
@@ -11,6 +11,7 @@ import play.api.test.Helpers._
 import play.api.test._
 import views.ErrorBody
 import ErrorBody._
+import models.db.slick.DBTables
 import play.api.cache.AsyncCacheApi
 
 import scala.concurrent.{ExecutionContext, Future}

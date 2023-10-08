@@ -1,6 +1,6 @@
 package integration
 
-import models.{DBTables, Entity, Transition}
+import models.{Entity, Transition}
 import org.scalatest.BeforeAndAfterAll
 import org.scalatestplus.play._
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
@@ -11,6 +11,7 @@ import play.api.test._
 import views.{EntityRW, ErrorBody, TransitionRW}
 import TransitionRW._
 import EntityRW._
+import models.db.slick.DBTables
 
 import scala.concurrent.Future
 import scala.util.Using

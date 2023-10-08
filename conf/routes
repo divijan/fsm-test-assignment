@@ -23,3 +23,5 @@ PATCH   /entities/:name/state       controllers.Entities.move(name)
 GET     /transitions                controllers.Transitions.index
 # get a history of transitions for the given entity
 GET     /transitions/:name          controllers.Transitions.show(name)
+
+GET     /test                       controllers.Test.index

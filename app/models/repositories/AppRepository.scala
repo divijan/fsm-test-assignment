@@ -1,6 +1,8 @@
-package models
+package models.repositories
 
 import com.google.inject.ImplementedBy
+import models.db.slick.DBTables
+import models.{Entity, State, StateTransitionTable}
 
 import scala.concurrent.Future
 

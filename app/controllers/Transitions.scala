@@ -1,6 +1,7 @@
 package controllers
 
 import models._
+import models.repositories.TransitionLog
 import play.api.Logging
 import play.api.cache.AsyncCacheApi
 import play.api.libs.json.JsResultException

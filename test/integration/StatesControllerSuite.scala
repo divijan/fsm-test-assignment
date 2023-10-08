@@ -1,7 +1,6 @@
 package integration
 
 import controllers.States
-import models.DBTables
 import org.scalatestplus.play._
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.libs.json.Json
@@ -10,6 +9,7 @@ import play.api.test.Helpers._
 import play.api.test._
 import views.StateTransitionTableRW._
 import models.StateTransitionTable
+import models.db.slick.DBTables
 import play.api.cache.AsyncCacheApi
 
 import scala.concurrent.{ExecutionContext, Future}
